@@ -68,7 +68,7 @@ namespace AutoPartsServiceWebApi.Controllers
             {
                 var userCommon = await _context.UserCommons.FirstOrDefaultAsync(uc => uc.PhoneNumber == request.PhoneNumber);
                 var userBusiness = await _context.UserBusinesses
-                    .Include(ub => ub.Services) // Include Services in the query
+                    .Include(ub => ub.Services) 
                     .FirstOrDefaultAsync(ub => ub.Phone == request.PhoneNumber);
 
                 if (userCommon != null)
@@ -237,7 +237,7 @@ namespace AutoPartsServiceWebApi.Controllers
 
             var userBusiness = await _context.UserBusinesses
                             .Include(ub => ub.Devices)
-                            .Include(ub => ub.Services) // Include Services in the query
+                            .Include(ub => ub.Services) 
                             .FirstOrDefaultAsync(ub => ub.Devices.Any(d => d.DeviceId == deviceId));
 
             if (userCommon != null)

@@ -235,12 +235,10 @@ namespace AutoPartsServiceWebApi.Controllers
         [HttpGet("GetDocuments/{userId}")]
         public async Task<ActionResult<IEnumerable<DocumentUser>>> GetDocuments(int userId)
         {
-            // Fetching documents related to the specified user.
             var documents = await _context.Documents
                                           .Where(d => d.UserCommonId == userId)
                                           .ToListAsync();
 
-            // If there are no documents for the user, return a NotFound error.
             if (!documents.Any())
             {
                 return NotFound();
@@ -254,20 +252,18 @@ namespace AutoPartsServiceWebApi.Controllers
         {
             // Need to realize a method to check for fines (Victor)
 
-            return Ok();  // Return a response indicating whether fines were found, etc.
+            return Ok();
         }
 
         [HttpPost("AddDocument/{userId}")]
         public async Task<ActionResult> AddDocument(int userId, DocumentUserCreateDto documentDto)
         {
-            // Find the user to which the document will be added.
             var user = await _context.UserCommons.FindAsync(userId);
             if (user == null)
             {
                 return NotFound();
             }
 
-            // Create a new DocumentUser from the DTO
             var document = new DocumentUser
             {
                 DocumentType = documentDto.DocumentType,
@@ -278,10 +274,8 @@ namespace AutoPartsServiceWebApi.Controllers
                 UserCommonId = userId
             };
 
-            // Add the document to the Documents DbSet.
             _context.Documents.Add(document);
 
-            // Save changes in the database.
             await _context.SaveChangesAsync();
 
             return Ok();
