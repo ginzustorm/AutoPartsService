@@ -1,270 +1,314 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Cryptography;
+﻿using AutoPartsServiceWebApi.Data;
+using AutoPartsServiceWebApi.Dto;
 using AutoPartsServiceWebApi.Models;
-using AutoPartsServiceWebApi.Repository;
-using JWT;
-using JWT.Algorithms;
-using JWT.Builder;
-using JWT.Serializers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using Microsoft.EntityFrameworkCore;
+using System.Reflection.Metadata;
 
 namespace AutoPartsServiceWebApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     public class UserController : ControllerBase
     {
-        private readonly UserRepository _userRepository;
-        private readonly ILogger<UserController> _logger;
+        private readonly AutoDbContext _context;
+        private readonly IConfiguration _configuration;
 
-
-        public UserController(UserRepository userRepository, ILogger<UserController> logger)
+        public UserController(AutoDbContext context, IConfiguration configuration)
         {
-            _userRepository = userRepository;
-            _logger = logger;
+            _context = context;
+            _configuration = configuration;
         }
 
-
-        private static readonly string JwtSecret = GenerateJwtSecretKey();
-
-        public static string GenerateJwtSecretKey()
+        [HttpPost("addCar")]
+        public async Task<IActionResult> AddCar(int userCommonId, [FromBody] CarDto carDto)
         {
-            using (var rng = new RNGCryptoServiceProvider())
+            var userCommon = await _context.UserCommons
+                .Include(uc => uc.Cars)
+                .FirstOrDefaultAsync(uc => uc.Id == userCommonId);
+
+            if (userCommon == null)
             {
-                var key = new byte[32];
-                rng.GetBytes(key);
-                return Convert.ToBase64String(key);
+                return NotFound("User not found.");
             }
+
+            var newCar = new Car
+            {
+                Make = carDto.Make,
+                Model = carDto.Model,
+                Color = carDto.Color,
+                StateNumber = carDto.StateNumber,
+                VinNumber = carDto.VinNumber,
+                BodyNumber = carDto.BodyNumber,
+                UserCommonId = userCommonId
+            };
+
+            _context.Cars.Add(newCar);
+            await _context.SaveChangesAsync();
+
+            return Ok(newCar);
         }
 
-        [HttpGet("checkjwt")]
-        public IActionResult CheckJwtAndDeviceId(string jwt, string deviceId)
+        [HttpPut("UserCommon/{id}")]
+        public async Task<ActionResult<UserCommonDto>> EditUserCommon(int id, [FromBody] EditUserCommonDto editUserCommonDto)
         {
+            var userCommon = await _context.UserCommons.Include(uc => uc.Address)
+                                                       .Include(uc => uc.Cars) 
+                                                       .FirstOrDefaultAsync(uc => uc.Id == id);
+
+            if (userCommon == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            userCommon.Name = editUserCommonDto.Name;
+            userCommon.Email = editUserCommonDto.Email;
+            userCommon.PhoneNumber = editUserCommonDto.PhoneNumber;
+            userCommon.Password = editUserCommonDto.Password;
+
+            userCommon.Address.Country = editUserCommonDto.Address.Country;
+            userCommon.Address.Region = editUserCommonDto.Address.Region;
+            userCommon.Address.City = editUserCommonDto.Address.City;
+            userCommon.Address.Street = editUserCommonDto.Address.Street;
+
+            _context.Entry(userCommon.Address).State = EntityState.Modified;
+
             try
             {
-                var decoded = DecodeJwt(jwt);
-                var userId = int.Parse(decoded["userId"].ToString());
-
-                var user = _userRepository.GetUserByIdAndDeviceId(userId, deviceId);
-
-                if (user != null)
-                {
-                    return Ok(new
-                    {
-                        user.Name,
-                        user.Email,
-                        user.PhoneNumber,
-                        user.Role
-                    });
-                }
+                await _context.SaveChangesAsync();
             }
-            catch (Exception ex)
+            catch (DbUpdateConcurrencyException)
             {
-                _logger.LogError($"Error occurred while checking JWT and Device ID: {ex.Message}");
+                return NotFound("A concurrency error occurred. The User was not found in the database when attempting to update.");
             }
 
+            var updatedUserCommonDto = new UserCommonDto
+            {
+                Id = userCommon.Id,
+                Name = userCommon.Name,
+                Email = userCommon.Email,
+                PhoneNumber = userCommon.PhoneNumber,
+                RegistrationDate = userCommon.RegistrationDate,
+                Password = userCommon.Password,
+                Address = userCommon.Address,
+                Cars = userCommon.Cars.ToList()
+            };
 
-            return BadRequest("Invalid JWT or Device ID.");
+            return Ok(updatedUserCommonDto);
         }
 
-        [HttpPost("sendsms")]
-        public IActionResult SendSms([FromBody] string phoneNumber)
-        {
-            var user = _userRepository.GetUserByPhoneNumber(phoneNumber);
 
+
+
+        [HttpPut("UserBusiness/{id}")]
+        public async Task<ActionResult<UserBusinessDto>> EditUserBusiness(int id, EditUserBusinessDto editUserBusinessDto)
+        {
+            var userBusiness = await _context.UserBusinesses.Include(ub => ub.Services).FirstOrDefaultAsync(ub => ub.Id == id);
+
+            if (userBusiness == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            userBusiness.Email = editUserBusinessDto.Email;
+            userBusiness.Phone = editUserBusinessDto.Phone;
+            userBusiness.Password = editUserBusinessDto.Password;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return NotFound("A concurrency error occurred. The User was not found in the database when attempting to update.");
+            }
+
+            var updatedUserBusinessDto = new UserBusinessDto
+            {
+                Id = userBusiness.Id,
+                Email = userBusiness.Email,
+                Phone = userBusiness.Phone,
+                RegistrationDate = userBusiness.RegistrationDate,
+                Password = userBusiness.Password,
+                Services = userBusiness.Services.Select(s => new ServiceDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    Price = s.Price
+                }).ToList()
+            };
+
+            return Ok(updatedUserBusinessDto);
+        }
+
+        [HttpDelete("UserCommon/{userId}/Car/{carId}")]
+        public async Task<IActionResult> DeleteCar(int userId, int carId)
+        {
+            var userCommon = await _context.UserCommons.Include(uc => uc.Cars)
+                                                       .FirstOrDefaultAsync(uc => uc.Id == userId);
+
+            if (userCommon == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var car = userCommon.Cars.FirstOrDefault(c => c.Id == carId);
+
+            if (car == null)
+            {
+                return NotFound("Car not found.");
+            }
+
+            userCommon.Cars.Remove(car);
+            _context.Cars.Remove(car);
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpPost("UserBusiness/{userId}/Service")]
+        public async Task<ActionResult<ServiceDto>> AddService(int userId, ServiceDto serviceDto)
+        {
+            var userBusiness = await _context.UserBusinesses.FindAsync(userId);
+
+            if (userBusiness == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var service = new Service
+            {
+                Name = serviceDto.Name,
+                Description = serviceDto.Description,
+                Price = serviceDto.Price,
+                UserBusinessId = userId
+            };
+
+            _context.Services.Add(service);
+            userBusiness.Services.Add(service);
+            await _context.SaveChangesAsync();
+
+            serviceDto.Id = service.Id;
+
+            return CreatedAtAction(nameof(GetService), new { id = service.Id }, serviceDto);
+        }
+
+
+        [HttpDelete("Service/{id}")]
+        public async Task<IActionResult> DeleteService(int id)
+        {
+            var service = await _context.Services.FindAsync(id);
+            if (service == null)
+            {
+                return NotFound();
+            }
+
+            _context.Services.Remove(service);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpGet("Service/{id}")]
+        public async Task<ActionResult<ServiceDto>> GetService(int id)
+        {
+            var service = await _context.Services.FindAsync(id);
+
+            if (service == null)
+            {
+                return NotFound();
+            }
+
+            var serviceDto = new ServiceDto
+            {
+                Id = service.Id,
+                Name = service.Name,
+                Description = service.Description,
+                Price = service.Price
+            };
+
+            return serviceDto;
+        }
+
+        [HttpGet("GetDocuments/{userId}")]
+        public async Task<ActionResult<IEnumerable<DocumentUser>>> GetDocuments(int userId)
+        {
+            // Fetching documents related to the specified user.
+            var documents = await _context.Documents
+                                          .Where(d => d.UserCommonId == userId)
+                                          .ToListAsync();
+
+            // If there are no documents for the user, return a NotFound error.
+            if (!documents.Any())
+            {
+                return NotFound();
+            }
+
+            return documents;
+        }
+
+        [HttpPost("CheckFines")]
+        public ActionResult CheckFines(DocumentCheck documentCheck)
+        {
+            // Need to realize a method to check for fines (Victor)
+
+            return Ok();  // Return a response indicating whether fines were found, etc.
+        }
+
+        [HttpPost("AddDocument/{userId}")]
+        public async Task<ActionResult> AddDocument(int userId, DocumentUserCreateDto documentDto)
+        {
+            // Find the user to which the document will be added.
+            var user = await _context.UserCommons.FindAsync(userId);
             if (user == null)
             {
-                // Get the highest DeviceId from the existing users
-                string highestDeviceId = _userRepository.GetHighestDeviceId();
-                int highestDeviceNumber = 0;
-
-                if (!string.IsNullOrEmpty(highestDeviceId))
-                {
-                    // Extract the numeric part from the highest DeviceId
-                    int.TryParse(highestDeviceId.Substring("device".Length), out highestDeviceNumber);
-                }
-
-                // Increment the numeric part and create the new DeviceId
-                string newDeviceId = $"device{highestDeviceNumber + 1}";
-
-                // Create a new user with the given phone number and auto-incremented DeviceId
-                user = new User
-                {
-                    PhoneNumber = phoneNumber,
-                    RegistrationDate = DateTime.UtcNow,
-                    DeviceId = newDeviceId,
-                    SmsRecords = new List<Sms>()
-                };
-
-                _userRepository.AddOrUpdateUser(user);
-            }
-            else if (user.SmsRecords == null)
-            {
-                // Initialize the SmsRecords list for the existing user if it's null
-                user.SmsRecords = new List<Sms>();
+                return NotFound();
             }
 
-            // Generate a random SMS code
-            var smsCode = GenerateSmsCode();
+            // Create a new DocumentUser from the DTO
+            var document = new DocumentUser
+            {
+                DocumentType = documentDto.DocumentType,
+                CertificateNumber = documentDto.CertificateNumber,
+                StateNumber = documentDto.StateNumber,
+                DocumentNumber = documentDto.DocumentNumber,
+                UinAccruals = documentDto.UinAccruals,
+                UserCommonId = userId
+            };
 
-            // Log the SMS code for testing purposes
-            _logger.LogInformation($"SMS code for user {phoneNumber}: {smsCode}");
+            // Add the document to the Documents DbSet.
+            _context.Documents.Add(document);
 
-            // Add the SMS code to the user's SMS records
-            user.SmsRecords.Add(new Sms { PhoneNumber = phoneNumber, Code = smsCode, UserId = user.Id });
+            // Save changes in the database.
+            await _context.SaveChangesAsync();
 
-            // Save changes to the database
-            _userRepository.AddOrUpdateUser(user);
-
-            return Ok("SMS code sent.");
+            return Ok();
         }
 
 
-
-
-        [HttpPost("verifyphoneandsmscode")]
-        public IActionResult VerifyPhoneNumberAndSmsCode(string phoneNumber, string smsCode)
+        [HttpPost("AddReview/{userId}")]
+        public async Task<ActionResult> AddReview(int userId, ReviewCreateDto reviewDto)
         {
-            var user = _userRepository.GetUserByPhoneNumberAndSmsCode(phoneNumber, smsCode);
-
-            if (user != null)
+            var user = await _context.UserBusinesses.FindAsync(userId);
+            if (user == null)
             {
-                Console.WriteLine($"User found with Id: {user.Id}, PhoneNumber: {user.PhoneNumber}");
-                var jwt = EncodeJwt(new Dictionary<string, object> { { "userId", user.Id } });
-                return Ok(new
-                {
-                    Jwt = jwt,
-                    user.Name,
-                    user.Email,
-                    user.PhoneNumber,
-                    user.Role
-                });
+                return NotFound();
             }
 
-            var newJwt = EncodeJwt(new Dictionary<string, object> { { "userId", 0 } });
-            return Ok(new
+            var review = new Review
             {
-                Jwt = newJwt,
-                Message = "New user, please provide additional information."
-            });
+                UserBusinessId = userId,
+                Content = reviewDto.Content,
+                Rating = reviewDto.Rating
+            };
+
+            _context.Reviews.Add(review);
+            await _context.SaveChangesAsync();
+
+            return Ok();
         }
 
-
-        [HttpPost("updateuser")]
-        public IActionResult UpdateUser(string jwt, [FromBody] UpdateUserRequest updateUserRequest)
-        {
-            try
-            {
-                var decoded = DecodeJwt(jwt);
-                var userId = decoded.ContainsKey("userId") ? int.Parse(decoded["userId"].ToString()) : 0;
-
-                if (userId != 0)
-                {
-                    var existingUser = _userRepository.GetUserById(userId);
-                    if (existingUser != null)
-                    {
-                        existingUser.Name = updateUserRequest.Name;
-                        existingUser.Email = updateUserRequest.Email;
-                        existingUser.Role = updateUserRequest.Role;
-
-                        if (existingUser.Address == null)
-                        {
-                            existingUser.Address = new Address();
-                        }
-
-                        existingUser.Address.City = updateUserRequest.City;
-                        existingUser.Address.Country = updateUserRequest.Country;
-                        existingUser.Address.Street = updateUserRequest.Street;
-
-                        _userRepository.AddOrUpdateUser(existingUser);
-                        return Ok("User updated successfully.");
-                    }
-                    else
-                    {
-                        return BadRequest("User not found.");
-                    }
-                }
-                else
-                {
-                    var newUser = new User
-                    {
-                        Name = updateUserRequest.Name,
-                        Email = updateUserRequest.Email,
-                        Role = updateUserRequest.Role,
-                        Address = new Address
-                        {
-                            City = updateUserRequest.City,
-                            Country = updateUserRequest.Country,
-                            Street = updateUserRequest.Street
-                        }
-                    };
-
-                    _userRepository.AddOrUpdateUser(newUser);
-                    var newJwt = EncodeJwt(new Dictionary<string, object> { { "userId", newUser.Id } });
-                    return Ok(new
-                    {
-                        Jwt = newJwt,
-                        newUser.Name,
-                        newUser.Email,
-                        newUser.PhoneNumber,
-                        newUser.Role
-                    });
-                }
-            }
-            catch (Exception)
-            {
-                return BadRequest("Invalid JWT.");
-            }
-        }
-
-        private static string GenerateSmsCode()
-        {
-            var random = new Random();
-            return random.Next(100000, 999999).ToString();
-        }
-
-        private static string EncodeJwt(Dictionary<string, object> payload)
-        {
-            var jwt = new JwtBuilder()
-                .WithAlgorithm(new HMACSHA256Algorithm())
-                .WithSecret(JwtSecret)
-                .AddClaims(payload)
-                .Encode();
-
-            Console.WriteLine($"Encoded JWT: {jwt} with payload: {JsonConvert.SerializeObject(payload)}");
-
-            return jwt;
-        }
-
-
-        private static IDictionary<string, object> DecodeJwt(string jwt)
-        {
-            var jsonSerializer = new JsonNetSerializer();
-            var provider = new UtcDateTimeProvider();
-            var validator = new JwtValidator(jsonSerializer, provider);
-            var urlEncoder = new JwtBase64UrlEncoder();
-            var algorithm = new HMACSHA256Algorithm();
-            var decoder = new JwtDecoder(jsonSerializer, validator, urlEncoder, algorithm);
-
-            var decoded = decoder.DecodeToObject<IDictionary<string, object>>(jwt, JwtSecret, verify: true);
-
-            Console.WriteLine($"Decoded JWT: {jwt} to payload: {JsonConvert.SerializeObject(decoded)}");
-
-            return decoded;
-        }
-    }
-
-    public class UpdateUserRequest
-    {
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public Role Role { get; set; }
-        public string City { get; set; }
-        public string Country { get; set; }
-        public string Street { get; set; }
     }
 }
