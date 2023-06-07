@@ -29,7 +29,7 @@ namespace AutoPartsServiceWebApi.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> Post([FromBody] string phoneNumber)
+        public async Task<ActionResult<ApiResponse<LoginSms>>> Post([FromBody] string phoneNumber)
         {
             var isUserExists = _context.UserCommons.Any(uc => uc.PhoneNumber == phoneNumber) || _context.UserBusinesses.Any(ub => ub.Phone == phoneNumber);
 
@@ -44,25 +44,41 @@ namespace AutoPartsServiceWebApi.Controllers
             _context.LoginSmses.Add(loginSms);
             await _context.SaveChangesAsync();
 
-            return Ok(loginSms);
+            await SendSmsAsync(phoneNumber, loginSms.SmsCode);
+
+            return new ApiResponse<LoginSms>
+            {
+                Success = true,
+                Message = "SMS sent.",
+                Data = loginSms
+            };
         }
 
         [HttpPost("authenticate")]
-        public async Task<ActionResult> Authenticate([FromBody] LoginRequest request)
+        public async Task<ActionResult<ApiResponse<object>>> Authenticate([FromBody] LoginRequest request)
         {
             var loginSms = await _context.LoginSmses
                 .FirstOrDefaultAsync(ls => ls.PhoneNumber == request.PhoneNumber && ls.SmsCode == request.SmsCode);
 
             if (loginSms == null)
             {
-                return BadRequest("Invalid phone number or SMS code.");
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid phone number or SMS code."
+                };
             }
 
             var token = GenerateJwtToken(request.PhoneNumber);
 
             if (loginSms.NewUser)
             {
-                return Ok(new { Token = token, Message = "This is a new user." });
+                return new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "This is a new user.",
+                    Data = new { Token = token }
+                };
             }
             else
             {
@@ -83,7 +99,12 @@ namespace AutoPartsServiceWebApi.Controllers
                         Password = userCommon.Password,
                         Address = userCommon.Address
                     };
-                    return Ok(new { Token = token, User = userCommonDTO });
+                    return new ApiResponse<object>
+                    {
+                        Success = true,
+                        Message = "User found.",
+                        Data = new { Token = token, User = userCommonDTO }
+                    };
                 }
                 else if (userBusiness != null)
                 {
@@ -102,18 +123,27 @@ namespace AutoPartsServiceWebApi.Controllers
                             Price = s.Price
                         }).ToList()
                     };
-                    return Ok(new { Token = token, User = userBusinessDTO });
+                    return new ApiResponse<object>
+                    {
+                        Success = true,
+                        Message = "User found.",
+                        Data = new { Token = token, User = userBusinessDTO }
+                    };
                 }
                 else
                 {
-                    return BadRequest("User not found.");
+                    return new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "User not found."
+                    };
                 }
             }
         }
 
 
         [HttpPost("register")]
-        public async Task<ActionResult<object>> Register([FromBody] RegisterRequest request)
+        public async Task<ActionResult<ApiResponse<object>>> Register([FromBody] RegisterRequest request)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
@@ -129,14 +159,22 @@ namespace AutoPartsServiceWebApi.Controllers
             var phoneClaim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.MobilePhone);
             if (phoneClaim == null || phoneClaim.Value != request.PhoneNumber)
             {
-                return BadRequest("Invalid token or phone number.");
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid token or phone number."
+                };
             }
 
             var userCommon = await _context.UserCommons.FirstOrDefaultAsync(uc => uc.PhoneNumber == request.PhoneNumber);
             var userBusiness = await _context.UserBusinesses.FirstOrDefaultAsync(ub => ub.Phone == request.PhoneNumber);
             if (userCommon != null || userBusiness != null)
             {
-                return BadRequest("User already exists.");
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "User already exists."
+                };
             }
 
             if (request.UserType == "Common")
@@ -175,7 +213,12 @@ namespace AutoPartsServiceWebApi.Controllers
                     Address = userCommon.Address
                 };
 
-                return Ok(userCommonDto);
+                return new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "User registered.",
+                    Data = userCommonDto
+                };
             }
             else if (request.UserType == "Business")
             {
@@ -203,16 +246,25 @@ namespace AutoPartsServiceWebApi.Controllers
                     RegistrationDate = userBusiness.RegistrationDate
                 };
 
-                return Ok(userBusinessDto);
+                return new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "User registered.",
+                    Data = userBusinessDto
+                };
             }
             else
             {
-                return BadRequest("Invalid user type.");
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid user type."
+                };
             }
         }
 
         [HttpGet("userInfo")]
-        public async Task<IActionResult> GetUserInfo([FromQuery] string jwt, [FromQuery] string deviceId)
+        public async Task<ActionResult<ApiResponse<object>>> GetUserInfo([FromQuery] string jwt, [FromQuery] string deviceId)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
@@ -228,7 +280,11 @@ namespace AutoPartsServiceWebApi.Controllers
             var phoneClaim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.MobilePhone);
             if (phoneClaim == null)
             {
-                return BadRequest("Invalid token.");
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid token."
+                };
             }
 
             var userCommon = await _context.UserCommons
@@ -253,7 +309,12 @@ namespace AutoPartsServiceWebApi.Controllers
                     Address = userCommon.Address
                 };
 
-                return Ok(userCommonDto);
+                return new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "User found.",
+                    Data = userCommonDto
+                };
             }
             else if (userBusiness != null)
             {
@@ -273,11 +334,20 @@ namespace AutoPartsServiceWebApi.Controllers
                     }).ToList()
                 };
 
-                return Ok(userBusinessDto);
+                return new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "User found.",
+                    Data = userBusinessDto
+                };
             }
             else
             {
-                return NotFound("User not found.");
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
             }
         }
 
@@ -307,5 +377,42 @@ namespace AutoPartsServiceWebApi.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        private async Task SendSmsAsync(string phoneNumber, string message)
+        {
+            string src = 
+                $@"<?xml version=""1.0"" encoding=""UTF-8""?> 
+                    <SMS> 
+                        <operations> 
+                            <operation>SEND</operation> 
+                        </operations> 
+                        <authentification> 
+                            <username>Your AtomPark username here</username> 
+                            <password>Your AtomPark password here</password> 
+                        </authentification> 
+                        <message> 
+                            <sender>SMS</sender> 
+                            <text>{message}</text> 
+                        </message> 
+                        <numbers> 
+                        <number messageID=""msg11"">{phoneNumber}</number> 
+                        </numbers> 
+                    </SMS>";
+
+            var httpClient = new HttpClient();
+
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("XML", src)
+            });
+
+            HttpResponseMessage response = await httpClient.PostAsync("http://api.atompark.com/members/sms/xml.php", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception("SMS sending failed");
+            }
+        }
+
     }
 }

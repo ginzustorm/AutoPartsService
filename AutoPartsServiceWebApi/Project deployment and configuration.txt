@@ -1,0 +1,12 @@
+Project Deployment and Configuration
+This project is an ASP.NET Core Web API that is configured to use Entity Framework Core with a SQL Server database. The project also includes Swagger for API documentation and testing.
+
+Server Deployment
+Program.cs file indicates that this is an ASP.NET Core application. We can deploy it on any server that supports ASP.NET Core, including Azure App Service, IIS, Linux servers, or a Docker container.
+
+Environment Configuration
+The environment configuration is managed via the appsettings.json file, which includes settings such as the database connection string.
+The configuration for your SQL Server database is fetched using builder.Configuration.GetConnectionString("DefaultConnection") in Program.cs.
+
+Database Configuration
+The application uses Entity Framework Core with a SQL Server database. The database context AutoDbContext is added to the dependency injection container in Program.cs.

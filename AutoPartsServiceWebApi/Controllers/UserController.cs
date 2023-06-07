@@ -21,7 +21,7 @@ namespace AutoPartsServiceWebApi.Controllers
         }
 
         [HttpPost("addCar")]
-        public async Task<IActionResult> AddCar(int userCommonId, [FromBody] CarDto carDto)
+        public async Task<ActionResult<ApiResponse<Car>>> AddCar(int userCommonId, [FromBody] CarDto carDto)
         {
             var userCommon = await _context.UserCommons
                 .Include(uc => uc.Cars)
@@ -29,7 +29,11 @@ namespace AutoPartsServiceWebApi.Controllers
 
             if (userCommon == null)
             {
-                return NotFound("User not found.");
+                return new ApiResponse<Car>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
             }
 
             var newCar = new Car
@@ -46,11 +50,16 @@ namespace AutoPartsServiceWebApi.Controllers
             _context.Cars.Add(newCar);
             await _context.SaveChangesAsync();
 
-            return Ok(newCar);
+            return new ApiResponse<Car>
+            {
+                Success = true,
+                Message = "Car added successfully.",
+                Data = newCar
+            };
         }
 
         [HttpPut("UserCommon/{id}")]
-        public async Task<ActionResult<UserCommonDto>> EditUserCommon(int id, [FromBody] EditUserCommonDto editUserCommonDto)
+        public async Task<ActionResult<ApiResponse<UserCommonDto>>> EditUserCommon(int id, [FromBody] EditUserCommonDto editUserCommonDto)
         {
             var userCommon = await _context.UserCommons.Include(uc => uc.Address)
                                                        .Include(uc => uc.Cars) 
@@ -58,7 +67,11 @@ namespace AutoPartsServiceWebApi.Controllers
 
             if (userCommon == null)
             {
-                return NotFound("User not found.");
+                return new ApiResponse<UserCommonDto>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
             }
 
             userCommon.Name = editUserCommonDto.Name;
@@ -94,20 +107,29 @@ namespace AutoPartsServiceWebApi.Controllers
                 Cars = userCommon.Cars.ToList()
             };
 
-            return Ok(updatedUserCommonDto);
+            return new ApiResponse<UserCommonDto>
+            {
+                Success = true,
+                Message = "UserCommon edited successfully.",
+                Data = updatedUserCommonDto
+            };
         }
 
 
 
 
         [HttpPut("UserBusiness/{id}")]
-        public async Task<ActionResult<UserBusinessDto>> EditUserBusiness(int id, EditUserBusinessDto editUserBusinessDto)
+        public async Task<ActionResult<ApiResponse<UserBusinessDto>>> EditUserBusiness(int id, EditUserBusinessDto editUserBusinessDto)
         {
             var userBusiness = await _context.UserBusinesses.Include(ub => ub.Services).FirstOrDefaultAsync(ub => ub.Id == id);
 
             if (userBusiness == null)
             {
-                return NotFound("User not found.");
+                return new ApiResponse<UserBusinessDto>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
             }
 
             userBusiness.Email = editUserBusinessDto.Email;
@@ -120,7 +142,11 @@ namespace AutoPartsServiceWebApi.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                return NotFound("A concurrency error occurred. The User was not found in the database when attempting to update.");
+                return new ApiResponse<UserBusinessDto>
+                {
+                    Success = false,
+                    Message = "A concurrency error occurred. The User was not found in the database when attempting to update."
+                };
             }
 
             var updatedUserBusinessDto = new UserBusinessDto
@@ -139,25 +165,38 @@ namespace AutoPartsServiceWebApi.Controllers
                 }).ToList()
             };
 
-            return Ok(updatedUserBusinessDto);
+            return new ApiResponse<UserBusinessDto>
+            {
+                Success = true,
+                Message = "UserBusiness updated successfully.",
+                Data = updatedUserBusinessDto
+            };
         }
 
         [HttpDelete("UserCommon/{userId}/Car/{carId}")]
-        public async Task<IActionResult> DeleteCar(int userId, int carId)
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteCar(int userId, int carId)
         {
             var userCommon = await _context.UserCommons.Include(uc => uc.Cars)
                                                        .FirstOrDefaultAsync(uc => uc.Id == userId);
 
             if (userCommon == null)
             {
-                return NotFound("User not found.");
+                return new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
             }
 
             var car = userCommon.Cars.FirstOrDefault(c => c.Id == carId);
 
             if (car == null)
             {
-                return NotFound("Car not found.");
+                return new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Car not found."
+                };
             }
 
             userCommon.Cars.Remove(car);
@@ -165,17 +204,26 @@ namespace AutoPartsServiceWebApi.Controllers
 
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return new ApiResponse<bool>
+            {
+                Success = true,
+                Message = "Car deleted successfully.",
+                Data = true
+            };
         }
 
         [HttpPost("UserBusiness/{userId}/Service")]
-        public async Task<ActionResult<ServiceDto>> AddService(int userId, ServiceDto serviceDto)
+        public async Task<ActionResult<ApiResponse<ServiceDto>>> AddService(int userId, ServiceDto serviceDto)
         {
             var userBusiness = await _context.UserBusinesses.FindAsync(userId);
 
             if (userBusiness == null)
             {
-                return NotFound("User not found.");
+                return new ApiResponse<ServiceDto>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
             }
 
             var service = new Service
@@ -192,33 +240,51 @@ namespace AutoPartsServiceWebApi.Controllers
 
             serviceDto.Id = service.Id;
 
-            return CreatedAtAction(nameof(GetService), new { id = service.Id }, serviceDto);
+            return new ApiResponse<ServiceDto>
+            {
+                Success = true,
+                Message = "Service added successfully.",
+                Data = serviceDto
+            };
         }
 
 
         [HttpDelete("Service/{id}")]
-        public async Task<IActionResult> DeleteService(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteService(int id)
         {
             var service = await _context.Services.FindAsync(id);
             if (service == null)
             {
-                return NotFound();
+                return new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Service not found."
+                };
             }
 
             _context.Services.Remove(service);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return new ApiResponse<bool>
+            {
+                Success = true,
+                Message = "Service deleted successfully.",
+                Data = true
+            };
         }
 
         [HttpGet("Service/{id}")]
-        public async Task<ActionResult<ServiceDto>> GetService(int id)
+        public async Task<ActionResult<ApiResponse<ServiceDto>>> GetService(int id)
         {
             var service = await _context.Services.FindAsync(id);
 
             if (service == null)
             {
-                return NotFound();
+                return new ApiResponse<ServiceDto>
+                {
+                    Success = false,
+                    Message = "Service not found."
+                };
             }
 
             var serviceDto = new ServiceDto
@@ -229,7 +295,12 @@ namespace AutoPartsServiceWebApi.Controllers
                 Price = service.Price
             };
 
-            return serviceDto;
+            return new ApiResponse<ServiceDto>
+            {
+                Success = true,
+                Message = "Service retrieved successfully.",
+                Data = serviceDto
+            };
         }
 
         [HttpGet("GetDocuments/{userId}")]
@@ -248,20 +319,29 @@ namespace AutoPartsServiceWebApi.Controllers
         }
 
         [HttpPost("CheckFines")]
-        public ActionResult CheckFines(DocumentCheck documentCheck)
+        public ActionResult<ApiResponse<bool>> CheckFines(DocumentCheck documentCheck)
         {
-            // Need to realize a method to check for fines (Victor)
+            // Implement the method to check for fines
 
-            return Ok();
+            return new ApiResponse<bool>
+            {
+                Success = true,
+                Message = "Fines checked successfully.",
+                Data = true
+            };
         }
 
         [HttpPost("AddDocument/{userId}")]
-        public async Task<ActionResult> AddDocument(int userId, DocumentUserCreateDto documentDto)
+        public async Task<ActionResult<ApiResponse<DocumentUser>>> AddDocument(int userId, DocumentUserCreateDto documentDto)
         {
             var user = await _context.UserCommons.FindAsync(userId);
             if (user == null)
             {
-                return NotFound();
+                return new ApiResponse<DocumentUser>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
             }
 
             var document = new DocumentUser
@@ -275,20 +355,28 @@ namespace AutoPartsServiceWebApi.Controllers
             };
 
             _context.Documents.Add(document);
-
             await _context.SaveChangesAsync();
 
-            return Ok();
+            return new ApiResponse<DocumentUser>
+            {
+                Success = true,
+                Message = "Document added successfully.",
+                Data = document
+            };
         }
 
 
         [HttpPost("AddReview/{userId}")]
-        public async Task<ActionResult> AddReview(int userId, ReviewCreateDto reviewDto)
+        public async Task<ActionResult<ApiResponse<Review>>> AddReview(int userId, ReviewCreateDto reviewDto)
         {
             var user = await _context.UserBusinesses.FindAsync(userId);
             if (user == null)
             {
-                return NotFound();
+                return new ApiResponse<Review>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
             }
 
             var review = new Review
@@ -301,8 +389,12 @@ namespace AutoPartsServiceWebApi.Controllers
             _context.Reviews.Add(review);
             await _context.SaveChangesAsync();
 
-            return Ok();
+            return new ApiResponse<Review>
+            {
+                Success = true,
+                Message = "Review added successfully.",
+                Data = review
+            };
         }
-
     }
 }
