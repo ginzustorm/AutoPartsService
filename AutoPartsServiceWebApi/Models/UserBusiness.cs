@@ -13,5 +13,6 @@
         public List<Review> Reviews { get; set; }
         public int Rating { get; set; }
         public List<Service> Services { get; set; }
+        public string Avatar { get; set; }
     }
 }

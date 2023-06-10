@@ -4,6 +4,8 @@ using AutoPartsServiceWebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata;
+using Microsoft.AspNetCore.Http;
+
 
 namespace AutoPartsServiceWebApi.Controllers
 {
@@ -365,6 +367,55 @@ namespace AutoPartsServiceWebApi.Controllers
             };
         }
 
+        [HttpPost("UploadAvatarForCommonUser/{userId}")]
+        public async Task<ActionResult> UploadAvatarForCommonUser(int userId, [FromForm] IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return Content("file not selected");
+
+            var user = await _context.UserCommons.FindAsync(userId);
+            if (user == null)
+                return NotFound();
+
+            var path = Path.Combine(
+                Directory.GetCurrentDirectory(), "wwwroot/images",
+                file.FileName);
+
+            using (var stream = new FileStream(path, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            user.Avatar = file.FileName;
+            await _context.SaveChangesAsync();
+
+            return Ok(Path.Combine("/images", file.FileName));
+        }
+
+        [HttpPost("UploadAvatarForBusinessUser/{userId}")]
+        public async Task<ActionResult> UploadAvatarForBusinessUser(int userId, [FromForm] IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return Content("file not selected");
+
+            var user = await _context.UserBusinesses.FindAsync(userId);
+            if (user == null)
+                return NotFound();
+
+            var path = Path.Combine(
+                Directory.GetCurrentDirectory(), "wwwroot/images",
+                file.FileName);
+
+            using (var stream = new FileStream(path, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            user.Avatar = file.FileName;
+            await _context.SaveChangesAsync();
+
+            return Ok(Path.Combine("/images", file.FileName));
+        }
 
         [HttpPost("AddReview/{userId}")]
         public async Task<ActionResult<ApiResponse<Review>>> AddReview(int userId, ReviewCreateDto reviewDto)

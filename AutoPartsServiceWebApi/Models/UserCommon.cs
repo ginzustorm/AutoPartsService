@@ -14,5 +14,6 @@
         public List<Sms> SmsList { get; set; }
         public List<Car> Cars { get; set; }
         public List<DocumentUser> Documents { get; set; }
+        public string Avatar { get; set; }
     }
 }

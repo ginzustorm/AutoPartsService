@@ -10,5 +10,6 @@ namespace AutoPartsServiceWebApi.Dto
         public DateTime RegistrationDate { get; set; }
         public string Password { get; set; }
         public List<ServiceDto> Services { get; set; }
+        public string Avatar { get; set; }
     }
 }

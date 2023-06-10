@@ -12,5 +12,6 @@ namespace AutoPartsServiceWebApi.Dto
         public string Password { get; set; }
         public Address Address { get; set; }
         public List<Car> Cars { get; set; }
+        public string Avatar { get; set; }
     }
 }

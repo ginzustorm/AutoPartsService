@@ -7,6 +7,8 @@ using AutoPartsServiceWebApi.Data;
 using Microsoft.OpenApi.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AutoPartsServiceWebApi;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 internal class Program
 {
@@ -23,6 +25,8 @@ internal class Program
         builder.Services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+
+            c.OperationFilter<UploadFileOperation>(); 
         });
 
         var app = builder.Build();
@@ -44,7 +48,6 @@ internal class Program
         app.MapControllers();
 
         app.UseSwagger();
-
         app.UseSwaggerUI(c =>
         {
             c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
