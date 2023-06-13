@@ -9,6 +9,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoPartsServiceWebApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Microsoft.AspNetCore.Mvc;
 
 internal class Program
 {
@@ -21,12 +24,13 @@ internal class Program
             x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve);
         builder.Services.AddDbContext<AutoDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Services.AddSingleton<DatabaseCreator>();
 
         builder.Services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
 
-            c.OperationFilter<UploadFileOperation>(); 
+            c.OperationFilter<UploadFileOperation>();
         });
 
         var app = builder.Build();

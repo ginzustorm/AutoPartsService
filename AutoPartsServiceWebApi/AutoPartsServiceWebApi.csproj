@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
+    <Folder Include="Views\" />
     <Folder Include="wwwroot\images\" />
   </ItemGroup>
 

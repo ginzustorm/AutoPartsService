@@ -12,6 +12,7 @@ using System.Security.Claims;
 using Microsoft.Extensions.Configuration;
 using AutoPartsServiceWebApi.Dto;
 using System.Net;
+using Newtonsoft.Json;
 
 namespace AutoPartsServiceWebApi.Controllers
 {
@@ -378,41 +379,30 @@ namespace AutoPartsServiceWebApi.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private async Task SendSmsAsync(string phoneNumber, string message)
+        private async Task SendSmsAsync(string phoneNumber, string message, string sender = "SMS", DateTime? datetime = null, int sms_lifetime = 0, int type = 2)
         {
-            string src = 
-                $@"<?xml version=""1.0"" encoding=""UTF-8""?> 
-                    <SMS> 
-                        <operations> 
-                            <operation>SEND</operation> 
-                        </operations> 
-                        <authentification> 
-                            <username>Your AtomPark username here</username> 
-                            <password>Your AtomPark password here</password> 
-                        </authentification> 
-                        <message> 
-                            <sender>SMS</sender> 
-                            <text>{message}</text> 
-                        </message> 
-                        <numbers> 
-                        <number messageID=""msg11"">{phoneNumber}</number> 
-                        </numbers> 
-                    </SMS>";
+            var datetimeParam = datetime.HasValue ? datetime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "";
+
+            string url = $"https://api.atompark.com/sms/3.0/sendSMS?key=publicKey&sum=controlSum&sender={sender}&text={message}&phone={phoneNumber}&datetime={datetimeParam}&sms_lifetime={sms_lifetime}&type={type}";
 
             var httpClient = new HttpClient();
-
-            var content = new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("XML", src)
-            });
-
-            HttpResponseMessage response = await httpClient.PostAsync("http://api.atompark.com/members/sms/xml.php", content);
+            HttpResponseMessage response = await httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
             {
                 throw new Exception("SMS sending failed");
             }
+
+            string resultContent = await response.Content.ReadAsStringAsync();
+
+            var result = JsonConvert.DeserializeObject<dynamic>(resultContent);
+
+            if (result.result == null)
+            {
+                throw new Exception("Error during SMS sending. No result received.");
+            }
         }
+
 
     }
 }

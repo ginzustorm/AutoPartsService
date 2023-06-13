@@ -27,9 +27,9 @@ namespace AutoPartsServiceWebApi.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<UserCommon>()
-    .HasOne(a => a.Address)
-    .WithOne()
-    .HasForeignKey<Address>(a => a.Id);
+                .HasOne(a => a.Address)
+                .WithOne()
+                .HasForeignKey<Address>(a => a.Id);
 
             modelBuilder.Entity<UserCommon>()
                 .HasMany(uc => uc.Devices)
