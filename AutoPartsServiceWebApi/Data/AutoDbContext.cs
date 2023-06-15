@@ -22,6 +22,7 @@ namespace AutoPartsServiceWebApi.Data
         public DbSet<Device> Devices { get; set; }
         public DbSet<DocumentUser> Documents { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<Offer> Offers { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -35,6 +36,22 @@ namespace AutoPartsServiceWebApi.Data
                 .HasMany(uc => uc.Devices)
                 .WithOne(d => d.UserCommon)
                 .HasForeignKey(d => d.UserCommonId);
+
+            modelBuilder.Entity<UserCommon>()
+                .Property(uc => uc.Avatar)
+                .IsRequired(false);
+
+            modelBuilder.Entity<UserBusiness>()
+                .Property(ub => ub.Avatar)
+                .IsRequired(false);
+
+            modelBuilder.Entity<Device>()
+                .Property(d => d.UserBusinessId)
+                .IsRequired(false);
+
+            modelBuilder.Entity<Device>()
+                .Property(d => d.UserCommonId)
+                .IsRequired(false);
 
             modelBuilder.Entity<UserBusiness>()
                 .HasMany(ub => ub.Devices)
@@ -77,6 +94,17 @@ namespace AutoPartsServiceWebApi.Data
                 .WithOne(d => d.UserCommon)
                 .HasForeignKey(d => d.UserCommonId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Offer>()
+                .HasOne(o => o.UserCommon)
+                .WithMany(uc => uc.Offers)
+                .HasForeignKey(o => o.UserId)
+                .OnDelete(DeleteBehavior.Restrict); 
+
+            modelBuilder.Entity<Offer>()
+                .HasOne(o => o.Request)
+                .WithMany(r => r.Offers)
+                .HasForeignKey(o => o.RequestId);
         }
     }
 }
