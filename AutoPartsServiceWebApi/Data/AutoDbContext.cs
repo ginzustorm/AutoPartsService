@@ -99,12 +99,47 @@ namespace AutoPartsServiceWebApi.Data
                 .HasOne(o => o.UserCommon)
                 .WithMany(uc => uc.Offers)
                 .HasForeignKey(o => o.UserId)
-                .OnDelete(DeleteBehavior.Restrict); 
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Offer>()
                 .HasOne(o => o.Request)
                 .WithMany(r => r.Offers)
                 .HasForeignKey(o => o.RequestId);
+
+            modelBuilder.Entity<UserCommon>()
+                .Property(uc => uc.Name)
+                .IsRequired(false);
+            modelBuilder.Entity<UserCommon>()
+                .Property(uc => uc.Email)
+                .IsRequired(false);
+            modelBuilder.Entity<UserCommon>()
+                .Property(uc => uc.Password)
+                .IsRequired(false);
+            modelBuilder.Entity<UserCommon>()
+                .Property(uc => uc.Avatar)
+                .IsRequired(false);
+            modelBuilder.Entity<UserBusiness>()
+                .Property(ub => ub.Email)
+                .IsRequired(false);
+            modelBuilder.Entity<UserBusiness>()
+                .Property(ub => ub.Password)
+                .IsRequired(false);
+            modelBuilder.Entity<UserBusiness>()
+                .Property(ub => ub.Rating)
+                .IsRequired(false);
+            modelBuilder.Entity<UserBusiness>()
+                .Property(ub => ub.Avatar)
+                .IsRequired(false);
+
+            modelBuilder.Entity<Address>()
+                .Property(a => a.Country)
+                .IsRequired(false);
+            modelBuilder.Entity<Address>()
+                .Property(a => a.Region)
+                .IsRequired(false);
+            modelBuilder.Entity<Address>()
+                .Property(a => a.Street)
+                .IsRequired(false);
         }
     }
 }
