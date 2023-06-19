@@ -219,7 +219,7 @@ namespace AutoPartsServiceWebApi.Controllers
                 var device = userCommon.Devices?.FirstOrDefault(d => d.DeviceId == request.DeviceId);
                 if (device != null)
                 {
-                    // update device fields if needed
+                    // 
                 }
 
                 await _context.SaveChangesAsync();
@@ -280,7 +280,6 @@ namespace AutoPartsServiceWebApi.Controllers
                 };
             }
         }
-
 
         [HttpGet("userInfo")]
         public async Task<ActionResult<ApiResponse<object>>> GetUserInfo([FromQuery] string deviceId, [FromQuery] string jwt)
