@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutoPartsServiceWebApi.Migrations
 {
     [DbContext(typeof(AutoDbContext))]
-    [Migration("20230625035424_BasedMigration")]
-    partial class BasedMigration
+    [Migration("20230625133342_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -413,6 +413,9 @@ namespace AutoPartsServiceWebApi.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Email")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Jwt")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")

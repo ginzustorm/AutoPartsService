@@ -17,5 +17,6 @@
         public string? Avatar { get; set; }
         public ICollection<Offer> Offers { get; set; }
         public List<Service>? Services { get; set; }
+        public string? Jwt { get; set; }
     }
 }

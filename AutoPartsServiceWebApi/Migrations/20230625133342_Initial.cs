@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AutoPartsServiceWebApi.Migrations
 {
     /// <inheritdoc />
-    public partial class BasedMigration : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -57,7 +57,8 @@ namespace AutoPartsServiceWebApi.Migrations
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RegistrationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Password = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Avatar = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Avatar = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Jwt = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
