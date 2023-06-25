@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.IO;
 
 namespace AutoPartsServiceWebApi.Data
@@ -21,21 +22,58 @@ namespace AutoPartsServiceWebApi.Data
             var optionsBuilder = new DbContextOptionsBuilder<AutoDbContext>();
             optionsBuilder.UseSqlServer(connectionString);
 
-            using (var context = new AutoDbContext(connectionString))
+            using (var context = new AutoDbContext(optionsBuilder.Options))
             {
                 context.Database.Migrate();
             }
 
             // Load configuration
-            var configurationBuilder = new ConfigurationBuilder();
-            configurationBuilder.AddJsonFile("appsettings.json");
-            var root = configurationBuilder.Build();
+            var json = File.ReadAllText("appsettings.json");
+            var jsonObj = JObject.Parse(json);
+
+            // Make sure "ConnectionStrings" section exists
+            if (jsonObj["ConnectionStrings"] == null)
+            {
+                jsonObj["ConnectionStrings"] = new JObject();
+            }
 
             // Update configuration
-            root.GetSection("ConnectionStrings")["DefaultConnection"] = connectionString;
+            jsonObj["ConnectionStrings"]["DefaultConnection"] = connectionString;
 
             // Save configuration
-            File.WriteAllText("appsettings.json", JsonConvert.SerializeObject(root, Formatting.Indented));
+            string output = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+            File.WriteAllText("appsettings.json", output);
+        }
+
+
+        public void CreateLocalDatabase(string databaseName)
+        {
+            var connectionString = $"Server=(localdb)\\mssqllocaldb;Database={databaseName};Trusted_Connection=True;";
+
+            var optionsBuilder = new DbContextOptionsBuilder<AutoDbContext>();
+            optionsBuilder.UseSqlServer(connectionString);
+
+            using (var context = new AutoDbContext(optionsBuilder.Options))
+            {
+                context.Database.Migrate();
+            }
+
+            // Load configuration
+            var json = File.ReadAllText("appsettings.json");
+            var jsonObj = JObject.Parse(json);
+
+            // Make sure "ConnectionStrings" section exists
+            if (jsonObj["ConnectionStrings"] == null)
+            {
+                jsonObj["ConnectionStrings"] = new JObject();
+            }
+
+            // Update configuration
+            jsonObj["ConnectionStrings"]["DefaultConnection"] = connectionString;
+
+            // Save configuration
+            string output = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+            File.WriteAllText("appsettings.json", output);
         }
     }
 }

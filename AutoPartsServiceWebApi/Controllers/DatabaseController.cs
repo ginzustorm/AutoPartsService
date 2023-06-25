@@ -17,7 +17,7 @@ namespace AutoPartsServiceWebApi.Controllers
             _databaseCreator = databaseCreator;
         }
 
-        /*[HttpPost("createlocaldb")]
+        [HttpPost("createlocaldb")]
         public IActionResult CreateLocalDatabase(string databaseName)
         {
             try
@@ -29,7 +29,7 @@ namespace AutoPartsServiceWebApi.Controllers
             {
                 return BadRequest(ex.Message);
             }
-        }*/
+        }
 
 
         [HttpPost("createdb")]
