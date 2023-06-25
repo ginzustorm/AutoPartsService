@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutoPartsServiceWebApi.Migrations
 {
     [DbContext(typeof(AutoDbContext))]
-    [Migration("20230619072944_BASEDMigrationV10")]
-    partial class BASEDMigrationV10
+    [Migration("20230625035424_BasedMigration")]
+    partial class BasedMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -61,15 +61,11 @@ namespace AutoPartsServiceWebApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("BodyNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Color")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Make")
+                    b.Property<string>("Mark")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -273,17 +269,25 @@ namespace AutoPartsServiceWebApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Content")
+                    b.Property<string>("Comment")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserBusinessId")
+                    b.Property<int>("ServiceId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UserBusinessId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ServiceId");
 
                     b.HasIndex("UserBusinessId");
 
@@ -298,6 +302,17 @@ namespace AutoPartsServiceWebApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<byte[]>("Avatar")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<double>("AverageScore")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -309,15 +324,17 @@ namespace AutoPartsServiceWebApi.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("ServiceType")
+                    b.Property<int?>("UserBusinessId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserBusinessId")
+                    b.Property<int>("UserCommonId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("UserBusinessId");
+
+                    b.HasIndex("UserCommonId");
 
                     b.ToTable("Services");
                 });
@@ -502,24 +519,32 @@ namespace AutoPartsServiceWebApi.Migrations
 
             modelBuilder.Entity("AutoPartsServiceWebApi.Models.Review", b =>
                 {
-                    b.HasOne("AutoPartsServiceWebApi.Models.UserBusiness", "UserBusiness")
+                    b.HasOne("AutoPartsServiceWebApi.Models.Service", "Service")
                         .WithMany("Reviews")
-                        .HasForeignKey("UserBusinessId")
+                        .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("UserBusiness");
+                    b.HasOne("AutoPartsServiceWebApi.Models.UserBusiness", null)
+                        .WithMany("Reviews")
+                        .HasForeignKey("UserBusinessId");
+
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("AutoPartsServiceWebApi.Models.Service", b =>
                 {
-                    b.HasOne("AutoPartsServiceWebApi.Models.UserBusiness", "UserBusiness")
+                    b.HasOne("AutoPartsServiceWebApi.Models.UserBusiness", null)
                         .WithMany("Services")
-                        .HasForeignKey("UserBusinessId")
+                        .HasForeignKey("UserBusinessId");
+
+                    b.HasOne("AutoPartsServiceWebApi.Models.UserCommon", "UserCommon")
+                        .WithMany("Services")
+                        .HasForeignKey("UserCommonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("UserBusiness");
+                    b.Navigation("UserCommon");
                 });
 
             modelBuilder.Entity("AutoPartsServiceWebApi.Models.Sms", b =>
@@ -546,6 +571,11 @@ namespace AutoPartsServiceWebApi.Migrations
                     b.Navigation("Offers");
                 });
 
+            modelBuilder.Entity("AutoPartsServiceWebApi.Models.Service", b =>
+                {
+                    b.Navigation("Reviews");
+                });
+
             modelBuilder.Entity("AutoPartsServiceWebApi.Models.UserBusiness", b =>
                 {
                     b.Navigation("Devices");
@@ -570,6 +600,8 @@ namespace AutoPartsServiceWebApi.Migrations
                     b.Navigation("Offers");
 
                     b.Navigation("Request");
+
+                    b.Navigation("Services");
 
                     b.Navigation("SmsList");
                 });

@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata;
 using Microsoft.AspNetCore.Http;
-
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 
 namespace AutoPartsServiceWebApi.Controllers
 {
@@ -23,429 +26,401 @@ namespace AutoPartsServiceWebApi.Controllers
         }
 
         [HttpPost("addCar")]
-        public async Task<ActionResult<ApiResponse<Car>>> AddCar(int userCommonId, [FromBody] CarDto carDto)
+        public async Task<ActionResult<ApiResponse<List<ResponseCarDto>>>> AddCar([FromBody] AddCarRequest request)
         {
-            var userCommon = await _context.UserCommons
-                .Include(uc => uc.Cars)
-                .FirstOrDefaultAsync(uc => uc.Id == userCommonId);
-
-            if (userCommon == null)
+            var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
+            if (!validationResponse.Success)
             {
-                return new ApiResponse<Car>
-                {
-                    Success = false,
-                    Message = "User not found."
-                };
+                return BadRequest(validationResponse);
             }
 
             var newCar = new Car
             {
-                Make = carDto.Make,
-                Model = carDto.Model,
-                Color = carDto.Color,
-                StateNumber = carDto.StateNumber,
-                VinNumber = carDto.VinNumber,
-                BodyNumber = carDto.BodyNumber,
-                UserCommonId = userCommonId
+                Mark = request.Data.Mark,
+                Model = request.Data.Model,
+                Color = request.Data.Color,
+                StateNumber = request.Data.StateNumber,
+                VinNumber = request.Data.VinNumber,
+                UserCommonId = validationResponse.Data.Id
             };
 
             _context.Cars.Add(newCar);
             await _context.SaveChangesAsync();
 
-            return new ApiResponse<Car>
+            // Get updated list of cars
+            var user = await _context.UserCommons
+                .Include(uc => uc.Cars)
+                .FirstOrDefaultAsync(uc => uc.Id == validationResponse.Data.Id);
+
+            var carDtos = user.Cars.Select(car => new ResponseCarDto
+            {
+                Id = car.Id,
+                Mark = car.Mark,
+                Model = car.Model,
+                Color = car.Color,
+                StateNumber = car.StateNumber,
+                VinNumber = car.VinNumber
+            }).ToList();
+
+            return Ok(new ApiResponse<List<ResponseCarDto>>
             {
                 Success = true,
                 Message = "Car added successfully.",
-                Data = newCar
-            };
-        }
-
-        [HttpPut("UserCommon/{id}")]
-        public async Task<ActionResult<ApiResponse<UserCommonDto>>> EditUserCommon(int id, [FromBody] EditUserCommonDto editUserCommonDto)
-        {
-            var userCommon = await _context.UserCommons.Include(uc => uc.Address)
-                                                       .Include(uc => uc.Cars) 
-                                                       .FirstOrDefaultAsync(uc => uc.Id == id);
-
-            if (userCommon == null)
-            {
-                return new ApiResponse<UserCommonDto>
-                {
-                    Success = false,
-                    Message = "User not found."
-                };
-            }
-
-            userCommon.Name = editUserCommonDto.Name;
-            userCommon.Email = editUserCommonDto.Email;
-            userCommon.PhoneNumber = editUserCommonDto.PhoneNumber;
-            userCommon.Password = editUserCommonDto.Password;
-
-            userCommon.Address.Country = editUserCommonDto.Address.Country;
-            userCommon.Address.Region = editUserCommonDto.Address.Region;
-            userCommon.Address.City = editUserCommonDto.Address.City;
-            userCommon.Address.Street = editUserCommonDto.Address.Street;
-
-            _context.Entry(userCommon.Address).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return NotFound("A concurrency error occurred. The User was not found in the database when attempting to update.");
-            }
-
-            var updatedUserCommonDto = new UserCommonDto
-            {
-                Id = userCommon.Id,
-                Name = userCommon.Name,
-                Email = userCommon.Email,
-                PhoneNumber = userCommon.PhoneNumber,
-                RegistrationDate = userCommon.RegistrationDate,
-                Password = userCommon.Password,
-                Address = userCommon.Address,
-                Cars = userCommon.Cars.ToList()
-            };
-
-            return new ApiResponse<UserCommonDto>
-            {
-                Success = true,
-                Message = "UserCommon edited successfully.",
-                Data = updatedUserCommonDto
-            };
+                Data = carDtos,
+                Jwt = request.Jwt
+            });
         }
 
 
 
-
-        [HttpPut("UserBusiness/{id}")]
-        public async Task<ActionResult<ApiResponse<UserBusinessDto>>> EditUserBusiness(int id, EditUserBusinessDto editUserBusinessDto)
+        [HttpPost("deleteCar")]
+        public async Task<ActionResult<ApiResponse<List<ResponseCarDto>>>> DeleteCar([FromBody] CarIdDeviceJwtDto request)
         {
-            var userBusiness = await _context.UserBusinesses.Include(ub => ub.Services).FirstOrDefaultAsync(ub => ub.Id == id);
-
-            if (userBusiness == null)
+            var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
+            if (!validationResponse.Success)
             {
-                return new ApiResponse<UserBusinessDto>
+                return new ApiResponse<List<ResponseCarDto>>
                 {
                     Success = false,
-                    Message = "User not found."
+                    Message = validationResponse.Message,
+                    Jwt = request.Jwt,
+                    Data = null
                 };
             }
 
-            userBusiness.Email = editUserBusinessDto.Email;
-            userBusiness.Phone = editUserBusinessDto.Phone;
-            userBusiness.Password = editUserBusinessDto.Password;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return new ApiResponse<UserBusinessDto>
-                {
-                    Success = false,
-                    Message = "A concurrency error occurred. The User was not found in the database when attempting to update."
-                };
-            }
-
-            var updatedUserBusinessDto = new UserBusinessDto
-            {
-                Id = userBusiness.Id,
-                Email = userBusiness.Email,
-                Phone = userBusiness.Phone,
-                RegistrationDate = userBusiness.RegistrationDate,
-                Password = userBusiness.Password,
-                Services = userBusiness.Services.Select(s => new ServiceDto
-                {
-                    Id = s.Id,
-                    Name = s.Name,
-                    Description = s.Description,
-                    Price = s.Price
-                }).ToList()
-            };
-
-            return new ApiResponse<UserBusinessDto>
-            {
-                Success = true,
-                Message = "UserBusiness updated successfully.",
-                Data = updatedUserBusinessDto
-            };
-        }
-
-        [HttpDelete("UserCommon/{userId}/Car/{carId}")]
-        public async Task<ActionResult<ApiResponse<bool>>> DeleteCar(int userId, int carId)
-        {
-            var userCommon = await _context.UserCommons.Include(uc => uc.Cars)
-                                                       .FirstOrDefaultAsync(uc => uc.Id == userId);
-
-            if (userCommon == null)
-            {
-                return new ApiResponse<bool>
-                {
-                    Success = false,
-                    Message = "User not found."
-                };
-            }
-
-            var car = userCommon.Cars.FirstOrDefault(c => c.Id == carId);
-
+            var car = validationResponse.Data.Cars.FirstOrDefault(c => c.Id == request.CarId);
             if (car == null)
             {
-                return new ApiResponse<bool>
+                return new ApiResponse<List<ResponseCarDto>>
                 {
                     Success = false,
-                    Message = "Car not found."
+                    Message = "Car not found.",
+                    Jwt = request.Jwt,
+                    Data = null
                 };
             }
 
-            userCommon.Cars.Remove(car);
+            validationResponse.Data.Cars.Remove(car);
             _context.Cars.Remove(car);
 
             await _context.SaveChangesAsync();
 
-            return new ApiResponse<bool>
+            var updatedCarList = validationResponse.Data.Cars.Select(c => new ResponseCarDto
+            {
+                Id = c.Id,
+                Mark = c.Mark,
+                Model = c.Model,
+                Color = c.Color,
+                StateNumber = c.StateNumber,
+                VinNumber = c.VinNumber
+            }).ToList();
+
+            return new ApiResponse<List<ResponseCarDto>>
             {
                 Success = true,
                 Message = "Car deleted successfully.",
-                Data = true
+                Jwt = request.Jwt,
+                Data = updatedCarList
             };
         }
 
-        [HttpPost("UserBusiness/{userId}/Service")]
-        public async Task<ActionResult<ApiResponse<ServiceDto>>> AddService(int userId, ServiceDto serviceDto)
-        {
-            var userBusiness = await _context.UserBusinesses.FindAsync(userId);
 
-            if (userBusiness == null)
+        [HttpPost("addService")]
+        public async Task<ActionResult<ApiResponse<List<ServiceDto>>>> AddService([FromBody] ServiceDeviceJwtDto request)
+        {
+            try
             {
-                return new ApiResponse<ServiceDto>
+                if (string.IsNullOrEmpty(request.DeviceId) || string.IsNullOrEmpty(request.Jwt) || request.Data == null)
                 {
-                    Success = false,
-                    Message = "User not found."
+                    return new ApiResponse<List<ServiceDto>>
+                    {
+                        Success = false,
+                        Message = "Invalid request.",
+                        Jwt = request.Jwt,
+                        Data = null
+                    };
+                }
+
+                var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
+                if (!validationResponse.Success || validationResponse.Data == null)
+                {
+                    return new ApiResponse<List<ServiceDto>>
+                    {
+                        Success = false,
+                        Message = validationResponse?.Message ?? "Failed to validate user.",
+                        Jwt = request.Jwt,
+                        Data = null
+                    };
+                }
+
+                if (_context?.Services == null)
+                {
+                    return new ApiResponse<List<ServiceDto>>
+                    {
+                        Success = false,
+                        Message = "Services context is not initialized.",
+                        Jwt = request.Jwt,
+                        Data = null
+                    };
+                }
+
+                var newService = new Service
+                {
+                    Name = request.Data.Name,
+                    Description = request.Data.Description,
+                    Price = Convert.ToDecimal(request.Data.Price),
+                    Category = request.Data.Category,
+                    Avatar = Convert.FromBase64String(request.Data.Avatar),
+                    UserCommonId = validationResponse.Data.Id,
+                    AverageScore = 0
+                };
+
+                if (validationResponse.Data.Services == null)
+                {
+                    validationResponse.Data.Services = new List<Service>();
+                }
+
+                validationResponse.Data.Services.Add(newService);
+                _context.Services.Add(newService);
+                await _context.SaveChangesAsync();
+
+                var updatedServiceList = validationResponse.Data.Services.Select(s => new ServiceDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    Price = Convert.ToDouble(s.Price),
+                    Category = s.Category,
+                    Avatar = Convert.ToBase64String(s.Avatar),
+                    AverageScore = (decimal)s.AverageScore
+                }).ToList();
+
+                return new ApiResponse<List<ServiceDto>>
+                {
+                    Success = true,
+                    Message = "Service added successfully.",
+                    Jwt = request.Jwt,
+                    Data = updatedServiceList
                 };
             }
-
-            var service = new Service
+            catch (Exception ex)
             {
-                Name = serviceDto.Name,
-                Description = serviceDto.Description,
-                Price = serviceDto.Price,
-                UserBusinessId = userId
-            };
 
-            _context.Services.Add(service);
-            userBusiness.Services.Add(service);
-            await _context.SaveChangesAsync();
-
-            serviceDto.Id = service.Id;
-
-            return new ApiResponse<ServiceDto>
-            {
-                Success = true,
-                Message = "Service added successfully.",
-                Data = serviceDto
-            };
+                return new ApiResponse<List<ServiceDto>>
+                {
+                    Success = false,
+                    Message = "An error occurred while processing your request.",
+                    Jwt = request.Jwt,
+                    Data = null
+                };
+            }
         }
 
 
-        [HttpDelete("Service/{id}")]
-        public async Task<ActionResult<ApiResponse<bool>>> DeleteService(int id)
+
+        [HttpPost("deleteService")]
+        public async Task<ActionResult<ApiResponse<List<ServiceDto>>>> DeleteService([FromBody] ServiceIdDeviceJwtDto request)
         {
-            var service = await _context.Services.FindAsync(id);
+            var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
+            if (!validationResponse.Success)
+            {
+                return BadRequest(validationResponse);
+            }
+
+            var service = validationResponse.Data.Services.FirstOrDefault(s => s.Id == request.Id);
             if (service == null)
             {
-                return new ApiResponse<bool>
+                return NotFound(new ApiResponse<List<ServiceDto>>
                 {
                     Success = false,
                     Message = "Service not found."
-                };
+                });
             }
 
+            validationResponse.Data.Services.Remove(service);
             _context.Services.Remove(service);
+
             await _context.SaveChangesAsync();
 
-            return new ApiResponse<bool>
+            var remainingServices = validationResponse.Data.Services.Select(s => new ServiceDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Description = s.Description,
+                Price = Convert.ToDouble(s.Price),
+                Category = s.Category,
+                Avatar = Convert.ToBase64String(s.Avatar),
+                AverageScore = (decimal)s.AverageScore
+            }).ToList();
+
+            return Ok(new ApiResponse<List<ServiceDto>>
             {
                 Success = true,
                 Message = "Service deleted successfully.",
-                Data = true
-            };
+                Jwt = request.Jwt,
+                Data = remainingServices
+            });
         }
 
-        [HttpGet("Service/{id}")]
-        public async Task<ActionResult<ApiResponse<ServiceDto>>> GetService(int id)
+
+
+        [HttpPost("myServices")]
+        public async Task<ActionResult<ApiResponse<List<ServiceDto>>>> MyServices([FromBody] DeviceJwtDto request)
         {
-            var service = await _context.Services.FindAsync(id);
+            var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
+            if (!validationResponse.Success)
+            {
+                return BadRequest(validationResponse);
+            }
+
+            var myServices = validationResponse.Data.Services.Select(s => new ServiceDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Description = s.Description,
+                Price = (double)s.Price,
+                Category = s.Category,
+                Avatar = Convert.ToBase64String(s.Avatar),
+                AverageScore = (decimal)s.AverageScore
+            }).ToList();
+
+            return Ok(new ApiResponse<List<ServiceDto>>
+            {
+                Success = true,
+                Message = "Services fetched successfully.",
+                Jwt = request.Jwt,
+                Data = myServices
+            });
+        }
+
+        [HttpPost("allServices")]
+        public async Task<ActionResult<ApiResponse<List<ServiceWithUserDto>>>> AllServices([FromBody] OptionalCategoryDto request)
+        {
+            IQueryable<Service> query = _context.Services.Include(s => s.UserCommon);
+
+            if (!string.IsNullOrEmpty(request.Category))
+            {
+                query = query.Where(s => s.Category == request.Category);
+            }
+
+            var allServices = await query.Select(s => new ServiceWithUserDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Description = s.Description,
+                Price = (double)s.Price,
+                Category = s.Category,
+                Avatar = Convert.ToBase64String(s.Avatar),
+                AverageScore = (decimal)s.AverageScore
+            }).ToListAsync();
+
+            return Ok(new ApiResponse<List<ServiceWithUserDto>>
+            {
+                Success = true,
+                Message = "Services fetched successfully.",
+                Data = allServices
+            });
+        }
+
+        [HttpPost("addReview")]
+        public async Task<ActionResult<ApiResponse<List<ReviewDto>>>> AddReview([FromBody] AddReviewRequest request)
+        {
+            var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
+            if (!validationResponse.Success)
+            {
+                return BadRequest(validationResponse);
+            }
+
+            var service = await _context.Services.Include(s => s.Reviews)
+                .FirstOrDefaultAsync(s => s.Id == request.ServiceId);
 
             if (service == null)
             {
-                return new ApiResponse<ServiceDto>
+                return NotFound(new ApiResponse<List<ReviewDto>>
                 {
                     Success = false,
                     Message = "Service not found."
-                };
+                });
             }
 
-            var serviceDto = new ServiceDto
+            var newReview = new Review
             {
-                Id = service.Id,
-                Name = service.Name,
-                Description = service.Description,
-                Price = service.Price
+                Rating = request.Data.Rating,
+                Comment = request.Data.Comment,
+                ServiceId = service.Id
             };
 
-            return new ApiResponse<ServiceDto>
-            {
-                Success = true,
-                Message = "Service retrieved successfully.",
-                Data = serviceDto
-            };
-        }
+            service.Reviews.Add(newReview);
 
-        [HttpGet("GetDocuments/{userId}")]
-        public async Task<ActionResult<IEnumerable<DocumentUser>>> GetDocuments(int userId)
-        {
-            var documents = await _context.Documents
-                                          .Where(d => d.UserCommonId == userId)
-                                          .ToListAsync();
+            // Recalculate the average score
+            service.AverageScore = service.Reviews.Average(r => r.Rating);
 
-            if (!documents.Any())
-            {
-                return NotFound();
-            }
-
-            return documents;
-        }
-
-        [HttpPost("CheckFines")]
-        public ActionResult<ApiResponse<bool>> CheckFines(DocumentCheck documentCheck)
-        {
-            // Implement the method to check for fines
-
-            return new ApiResponse<bool>
-            {
-                Success = true,
-                Message = "Fines checked successfully.",
-                Data = true
-            };
-        }
-
-        [HttpPost("AddDocument/{userId}")]
-        public async Task<ActionResult<ApiResponse<DocumentUser>>> AddDocument(int userId, DocumentUserCreateDto documentDto)
-        {
-            var user = await _context.UserCommons.FindAsync(userId);
-            if (user == null)
-            {
-                return new ApiResponse<DocumentUser>
-                {
-                    Success = false,
-                    Message = "User not found."
-                };
-            }
-
-            var document = new DocumentUser
-            {
-                DocumentType = documentDto.DocumentType,
-                CertificateNumber = documentDto.CertificateNumber,
-                StateNumber = documentDto.StateNumber,
-                DocumentNumber = documentDto.DocumentNumber,
-                UinAccruals = documentDto.UinAccruals,
-                UserCommonId = userId
-            };
-
-            _context.Documents.Add(document);
             await _context.SaveChangesAsync();
 
-            return new ApiResponse<DocumentUser>
+            var updatedReviews = service.Reviews.Select(r => new ReviewDto
             {
-                Success = true,
-                Message = "Document added successfully.",
-                Data = document
-            };
-        }
+                Id = r.Id,
+                Rating = r.Rating,
+                Comment = r.Comment
+            }).ToList();
 
-        [HttpPost("UploadAvatarForCommonUser/{userId}")]
-        public async Task<ActionResult> UploadAvatarForCommonUser(int userId, [FromForm] IFormFile file)
-        {
-            if (file == null || file.Length == 0)
-                return Content("file not selected");
-
-            var user = await _context.UserCommons.FindAsync(userId);
-            if (user == null)
-                return NotFound();
-
-            var path = Path.Combine(
-                Directory.GetCurrentDirectory(), "wwwroot/images",
-                file.FileName);
-
-            using (var stream = new FileStream(path, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            user.Avatar = file.FileName;
-            await _context.SaveChangesAsync();
-
-            return Ok(Path.Combine("/images", file.FileName));
-        }
-
-        [HttpPost("UploadAvatarForBusinessUser/{userId}")]
-        public async Task<ActionResult> UploadAvatarForBusinessUser(int userId, [FromForm] IFormFile file)
-        {
-            if (file == null || file.Length == 0)
-                return Content("file not selected");
-
-            var user = await _context.UserBusinesses.FindAsync(userId);
-            if (user == null)
-                return NotFound();
-
-            var path = Path.Combine(
-                Directory.GetCurrentDirectory(), "wwwroot/images",
-                file.FileName);
-
-            using (var stream = new FileStream(path, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            user.Avatar = file.FileName;
-            await _context.SaveChangesAsync();
-
-            return Ok(Path.Combine("/images", file.FileName));
-        }
-
-        [HttpPost("AddReview/{userId}")]
-        public async Task<ActionResult<ApiResponse<Review>>> AddReview(int userId, ReviewCreateDto reviewDto)
-        {
-            var user = await _context.UserBusinesses.FindAsync(userId);
-            if (user == null)
-            {
-                return new ApiResponse<Review>
-                {
-                    Success = false,
-                    Message = "User not found."
-                };
-            }
-
-            var review = new Review
-            {
-                UserBusinessId = userId,
-                Content = reviewDto.Content,
-                Rating = reviewDto.Rating
-            };
-
-            _context.Reviews.Add(review);
-            await _context.SaveChangesAsync();
-
-            return new ApiResponse<Review>
+            return Ok(new ApiResponse<List<ReviewDto>>
             {
                 Success = true,
                 Message = "Review added successfully.",
-                Data = review
+                Jwt = request.Jwt,
+                Data = updatedReviews
+            });
+        }
+
+
+        private async Task<ApiResponse<UserCommon>> ValidateUser(string deviceId, string jwt)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+
+            var principal = tokenHandler.ValidateToken(jwt, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = false,
+                ValidateAudience = false
+            }, out SecurityToken validatedToken);
+
+            var phoneClaim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.MobilePhone);
+            if (phoneClaim == null)
+            {
+                return new ApiResponse<UserCommon>
+                {
+                    Success = false,
+                    Message = "Invalid token."
+                };
+            }
+
+            var user = await _context.UserCommons
+                .Include(uc => uc.Cars)
+                .Include(uc => uc.Services)
+                .FirstOrDefaultAsync(uc => uc.PhoneNumber == phoneClaim.Value && uc.Devices.Any(d => d.DeviceId == deviceId));
+
+            if (user == null)
+            {
+                return new ApiResponse<UserCommon>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
+            }
+
+            return new ApiResponse<UserCommon>
+            {
+                Success = true,
+                Message = "User validated.",
+                Data = user
             };
         }
+
+
+
+
     }
 }

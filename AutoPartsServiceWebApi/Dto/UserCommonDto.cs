@@ -10,8 +10,9 @@ namespace AutoPartsServiceWebApi.Dto
         public string PhoneNumber { get; set; }
         public DateTime RegistrationDate { get; set; }
         public string Password { get; set; }
-        public Address Address { get; set; }
-        public List<Car> Cars { get; set; }
+        public AddressDto Address { get; set; }
+        public List<CarDto> Cars { get; set; }
+        public List<ServiceDto> Services { get; set; }
         public string Avatar { get; set; }
     }
 }

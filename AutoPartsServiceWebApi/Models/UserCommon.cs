@@ -16,5 +16,6 @@
         public List<DocumentUser>? Documents { get; set; }
         public string? Avatar { get; set; }
         public ICollection<Offer> Offers { get; set; }
+        public List<Service>? Services { get; set; }
     }
 }

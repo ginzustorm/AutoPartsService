@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using AutoPartsServiceWebApi.Dto;
 using System.Net;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Hosting;
 
 namespace AutoPartsServiceWebApi.Controllers
 {
@@ -22,15 +23,17 @@ namespace AutoPartsServiceWebApi.Controllers
     {
         private readonly AutoDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _environment;
 
-        public LoginController(AutoDbContext context, IConfiguration configuration)
+        public LoginController(AutoDbContext context, IConfiguration configuration, IWebHostEnvironment environment)
         {
             _context = context;
             _configuration = configuration;
+            _environment = environment;
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<LoginSms>>> Post([FromBody] LoginRequestModel loginRequestModel)
+        public async Task<ActionResult> Post([FromBody] LoginRequestModel loginRequestModel)
         {
             var isUserExists = _context.UserCommons.Any(uc => uc.PhoneNumber == loginRequestModel.PhoneNumber) || _context.UserBusinesses.Any(ub => ub.Phone == loginRequestModel.PhoneNumber);
 
@@ -48,13 +51,9 @@ namespace AutoPartsServiceWebApi.Controllers
 
             await SendSmsAsync(loginRequestModel.PhoneNumber, loginSms.SmsCode);
 
-            return new ApiResponse<LoginSms>
-            {
-                Success = true,
-                Message = "SMS sent.",
-                Data = loginSms
-            };
+            return Ok(new { Message = "SMS sent." });
         }
+
 
 
         [HttpPost("authenticate")]
@@ -81,7 +80,6 @@ namespace AutoPartsServiceWebApi.Controllers
                 {
                     PhoneNumber = request.PhoneNumber,
                     RegistrationDate = DateTime.UtcNow,
-                    // Initialize the Devices list and add a new Device
                     Devices = new List<Device>
             {
                 new Device
@@ -91,7 +89,6 @@ namespace AutoPartsServiceWebApi.Controllers
             }
                 };
 
-                // Add the new user to the context and save changes
                 _context.UserCommons.Add(newUser);
                 await _context.SaveChangesAsync();
 
@@ -99,31 +96,21 @@ namespace AutoPartsServiceWebApi.Controllers
                 {
                     Success = true,
                     Message = "This is a new user.",
-                    Data = new { Token = token, User = newUser }
+                    Jwt = token,
+                    DeviceId = request.DeviceId,
+                    Data = null
                 };
             }
             else
             {
                 var userCommon = await _context.UserCommons
                     .Include(uc => uc.Devices)
+                    .Include(uc => uc.Address)
                     .FirstOrDefaultAsync(uc => uc.PhoneNumber == request.PhoneNumber);
 
-                // If userCommon does not have a device with this DeviceId, then add it
                 if (userCommon != null && userCommon.Devices.All(d => d.DeviceId != request.DeviceId))
                 {
                     userCommon.Devices.Add(new Device { DeviceId = request.DeviceId });
-                    await _context.SaveChangesAsync();
-                }
-
-                var userBusiness = await _context.UserBusinesses
-                    .Include(ub => ub.Services)
-                    .Include(ub => ub.Devices)
-                    .FirstOrDefaultAsync(ub => ub.Phone == request.PhoneNumber);
-
-                // If userBusiness does not have a device with this DeviceId, then add it
-                if (userBusiness != null && userBusiness.Devices.All(d => d.DeviceId != request.DeviceId))
-                {
-                    userBusiness.Devices.Add(new Device { DeviceId = request.DeviceId });
                     await _context.SaveChangesAsync();
                 }
 
@@ -137,37 +124,27 @@ namespace AutoPartsServiceWebApi.Controllers
                         PhoneNumber = userCommon.PhoneNumber,
                         RegistrationDate = userCommon.RegistrationDate,
                         Password = userCommon.Password,
-                        Address = userCommon.Address
+                        Avatar = userCommon.Avatar
                     };
-                    return new ApiResponse<object>
+
+                    // Check if userCommon.Address is not null
+                    if (userCommon.Address != null)
                     {
-                        Success = true,
-                        Message = "User found.",
-                        Data = new { Token = token, User = userCommonDTO }
-                    };
-                }
-                else if (userBusiness != null)
-                {
-                    var userBusinessDTO = new UserBusinessDto
-                    {
-                        Id = userBusiness.Id,
-                        Email = userBusiness.Email,
-                        Phone = userBusiness.Phone,
-                        RegistrationDate = userBusiness.RegistrationDate,
-                        Password = userBusiness.Password,
-                        Services = userBusiness.Services.Select(s => new ServiceDto
+                        userCommonDTO.Address = new AutoPartsServiceWebApi.Dto.AddressDto
                         {
-                            Id = s.Id,
-                            Name = s.Name,
-                            Description = s.Description,
-                            Price = s.Price
-                        }).ToList()
-                    };
+                            Country = userCommon.Address.Country,
+                            Region = userCommon.Address.Region,
+                            City = userCommon.Address.City,
+                            Street = userCommon.Address.Street
+                        };
+                    }
+
                     return new ApiResponse<object>
                     {
                         Success = true,
                         Message = "User found.",
-                        Data = new { Token = token, User = userBusinessDTO }
+                        Jwt = token,
+                        Data = userCommonDTO
                     };
                 }
                 else
@@ -181,15 +158,13 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
-
-
         [HttpPost("updateUser")]
-        public async Task<ActionResult<ApiResponse<object>>> UpdateUser([FromBody] RegisterRequest request)
+        public async Task<ActionResult<ApiResponse<string>>> UpdateUser([FromBody] UpdateUserRequest request)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
 
-            var principal = tokenHandler.ValidateToken(request.Token, new TokenValidationParameters
+            var principal = tokenHandler.ValidateToken(request.Jwt, new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
@@ -198,23 +173,46 @@ namespace AutoPartsServiceWebApi.Controllers
             }, out SecurityToken validatedToken);
 
             var phoneClaim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.MobilePhone);
-            if (phoneClaim == null || phoneClaim.Value != request.PhoneNumber)
+            if (phoneClaim == null || phoneClaim.Value != request.Data.PhoneNumber)
             {
-                return new ApiResponse<object>
+                return new ApiResponse<string>
                 {
                     Success = false,
                     Message = "Invalid token or phone number."
                 };
             }
 
-            var userCommon = await _context.UserCommons.FirstOrDefaultAsync(uc => uc.PhoneNumber == request.PhoneNumber);
-            var userBusiness = await _context.UserBusinesses.FirstOrDefaultAsync(ub => ub.Phone == request.PhoneNumber);
-
+            var userCommon = await _context.UserCommons.Include(uc => uc.Address).FirstOrDefaultAsync(uc => uc.PhoneNumber == request.Data.PhoneNumber);
             if (userCommon != null)
             {
-                userCommon.Name = request.Name;
-                userCommon.Email = request.Email;
-                userCommon.Password = request.Password;
+                userCommon.Name = request.Data.Name;
+                userCommon.Email = request.Data.Email;
+                userCommon.Password = request.Data.Password;
+
+                // Address update
+                if (request.Data.Address != null)
+                {
+                    if (userCommon.Address == null)
+                    {
+                        userCommon.Address = new Address();
+                    }
+
+                    userCommon.Address.Country = request.Data.Address.Country;
+                    userCommon.Address.Region = request.Data.Address.Region;
+                    userCommon.Address.City = request.Data.Address.City;
+                    userCommon.Address.Street = request.Data.Address.Street;
+                    userCommon.Address.UserCommonId = userCommon.Id;
+
+                    _context.Addresses.Update(userCommon.Address);
+                }
+
+                // Check if the Avatar field is not null or empty and then convert it to byte array and save
+                if (!string.IsNullOrEmpty(request.Data.Avatar))
+                {
+                    string fileName = $"{userCommon.Id}_avatar.jpg";
+                    string imageUrl = SaveImage(request.Data.Avatar, fileName);
+                    userCommon.Avatar = imageUrl;
+                }
 
                 var device = userCommon.Devices?.FirstOrDefault(d => d.DeviceId == request.DeviceId);
                 if (device != null)
@@ -224,56 +222,16 @@ namespace AutoPartsServiceWebApi.Controllers
 
                 await _context.SaveChangesAsync();
 
-                var userCommonDto = new UserCommonDto
-                {
-                    Id = userCommon.Id,
-                    Name = userCommon.Name,
-                    Email = userCommon.Email,
-                    PhoneNumber = userCommon.PhoneNumber,
-                    Password = userCommon.Password,
-                    RegistrationDate = userCommon.RegistrationDate,
-                    Address = userCommon.Address
-                };
-
-                return new ApiResponse<object>
+                return new ApiResponse<string>
                 {
                     Success = true,
                     Message = "User updated.",
-                    Data = userCommonDto
-                };
-            }
-            else if (userBusiness != null)
-            {
-                userBusiness.Email = request.Email;
-                userBusiness.Password = request.Password;
-
-                var device = userBusiness.Devices.FirstOrDefault(d => d.DeviceId == request.DeviceId);
-                if (device != null)
-                {
-                    // 
-                }
-
-                await _context.SaveChangesAsync();
-
-                var userBusinessDto = new UserBusinessDto
-                {
-                    Id = userBusiness.Id,
-                    Email = userBusiness.Email,
-                    Phone = userBusiness.Phone,
-                    Password = userBusiness.Password,
-                    RegistrationDate = userBusiness.RegistrationDate
-                };
-
-                return new ApiResponse<object>
-                {
-                    Success = true,
-                    Message = "User updated.",
-                    Data = userBusinessDto
+                    Jwt = request.Jwt
                 };
             }
             else
             {
-                return new ApiResponse<object>
+                return new ApiResponse<string>
                 {
                     Success = false,
                     Message = "User not found."
@@ -281,13 +239,15 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
-        [HttpGet("userInfo")]
-        public async Task<ActionResult<ApiResponse<object>>> GetUserInfo([FromQuery] string deviceId, [FromQuery] string jwt)
+
+
+        [HttpPost("userInfo")]
+        public async Task<ActionResult<ApiResponse<object>>> GetUserInfo([FromBody] UserRequest request)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
 
-            var principal = tokenHandler.ValidateToken(jwt, new TokenValidationParameters
+            var principal = tokenHandler.ValidateToken(request.Jwt, new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
@@ -306,13 +266,16 @@ namespace AutoPartsServiceWebApi.Controllers
             }
 
             var userCommon = await _context.UserCommons
-                            .Include(u => u.Devices)
-                            .FirstOrDefaultAsync(uc => uc.Devices.Any(d => d.DeviceId == deviceId));
+                                .Include(u => u.Devices)
+                                .Include(u => u.Address)
+                                .Include(u => u.Cars) // fetch UserCommon's Cars
+                                .Include(u => u.Services) // fetch UserCommon's Services
+                                .FirstOrDefaultAsync(uc => uc.Devices.Any(d => d.DeviceId == request.DeviceId));
 
             var userBusiness = await _context.UserBusinesses
-                            .Include(ub => ub.Devices)
-                            .Include(ub => ub.Services)
-                            .FirstOrDefaultAsync(ub => ub.Devices.Any(d => d.DeviceId == deviceId));
+                                .Include(ub => ub.Devices)
+                                .Include(ub => ub.Services)
+                                .FirstOrDefaultAsync(ub => ub.Devices.Any(d => d.DeviceId == request.DeviceId));
 
             if (userCommon != null)
             {
@@ -324,13 +287,43 @@ namespace AutoPartsServiceWebApi.Controllers
                     PhoneNumber = userCommon.PhoneNumber,
                     Password = userCommon.Password,
                     RegistrationDate = userCommon.RegistrationDate,
-                    Address = userCommon.Address
+                    Avatar = userCommon.Avatar,
+                    Cars = userCommon.Cars?.Select(c => new CarDto
+                    {
+                        Mark = c.Mark,
+                        Model = c.Model,
+                        Color = c.Color,
+                        StateNumber = c.StateNumber,
+                        VinNumber = c.VinNumber
+                    }).ToList(),
+                    Services = userCommon.Services?.Select(s => new ServiceDto
+                    {
+                        Id = s.Id,
+                        Name = s.Name,
+                        Description = s.Description,
+                        Price = Convert.ToDouble(s.Price),
+                        Category = s.Category,
+                        Avatar = Convert.ToBase64String(s.Avatar),
+                        AverageScore = (decimal)s.AverageScore
+                    }).ToList()
                 };
+
+                if (userCommon.Address != null)
+                {
+                    userCommonDto.Address = new AutoPartsServiceWebApi.Dto.AddressDto
+                    {
+                        Country = userCommon.Address.Country,
+                        Region = userCommon.Address.Region,
+                        City = userCommon.Address.City,
+                        Street = userCommon.Address.Street
+                    };
+                }
 
                 return new ApiResponse<object>
                 {
                     Success = true,
                     Message = "User found.",
+                    Jwt = request.Jwt,
                     Data = userCommonDto
                 };
             }
@@ -348,14 +341,19 @@ namespace AutoPartsServiceWebApi.Controllers
                         Id = s.Id,
                         Name = s.Name,
                         Description = s.Description,
-                        Price = s.Price
-                    }).ToList()
+                        Price = (double)s.Price,
+                        Category = s.Category,
+                        Avatar = Convert.ToBase64String(s.Avatar),
+                        AverageScore = (decimal)s.AverageScore
+                    }).ToList(),
+                    Avatar = userBusiness.Avatar
                 };
 
                 return new ApiResponse<object>
                 {
                     Success = true,
                     Message = "User found.",
+                    Jwt = request.Jwt,
                     Data = userBusinessDto
                 };
             }
@@ -367,6 +365,13 @@ namespace AutoPartsServiceWebApi.Controllers
                     Message = "User not found."
                 };
             }
+        }
+
+
+        public class UserRequest
+        {
+            public string DeviceId { get; set; }
+            public string Jwt { get; set; }
         }
 
 
@@ -419,6 +424,16 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
+        private string SaveImage(string base64Image, string fileName)
+        {
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images", fileName);
+
+            byte[] imageBytes = Convert.FromBase64String(base64Image);
+
+            System.IO.File.WriteAllBytes(path, imageBytes);
+
+            return $"/images/{fileName}";
+        }
 
     }
 }

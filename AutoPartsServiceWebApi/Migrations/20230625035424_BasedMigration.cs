@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AutoPartsServiceWebApi.Migrations
 {
     /// <inheritdoc />
-    public partial class BASEDMigrationV10 : Migration
+    public partial class BasedMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -65,50 +65,6 @@ namespace AutoPartsServiceWebApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Reviews",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Rating = table.Column<int>(type: "int", nullable: false),
-                    UserBusinessId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Reviews", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Reviews_UserBusinesses_UserBusinessId",
-                        column: x => x.UserBusinessId,
-                        principalTable: "UserBusinesses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Services",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ServiceType = table.Column<int>(type: "int", nullable: false),
-                    UserBusinessId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Services", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Services_UserBusinesses_UserBusinessId",
-                        column: x => x.UserBusinessId,
-                        principalTable: "UserBusinesses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Addresses",
                 columns: table => new
                 {
@@ -141,12 +97,11 @@ namespace AutoPartsServiceWebApi.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Make = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Mark = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Model = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Color = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     StateNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     VinNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    BodyNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UserCommonId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -238,6 +193,37 @@ namespace AutoPartsServiceWebApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Services",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Category = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Avatar = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    AverageScore = table.Column<double>(type: "float", nullable: false),
+                    UserCommonId = table.Column<int>(type: "int", nullable: false),
+                    UserBusinessId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Services", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Services_UserBusinesses_UserBusinessId",
+                        column: x => x.UserBusinessId,
+                        principalTable: "UserBusinesses",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Services_UserCommons_UserCommonId",
+                        column: x => x.UserCommonId,
+                        principalTable: "UserCommons",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Smses",
                 columns: table => new
                 {
@@ -293,6 +279,34 @@ namespace AutoPartsServiceWebApi.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Reviews",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Comment = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Rating = table.Column<int>(type: "int", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ServiceId = table.Column<int>(type: "int", nullable: false),
+                    UserBusinessId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Reviews", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Reviews_Services_ServiceId",
+                        column: x => x.ServiceId,
+                        principalTable: "Services",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Reviews_UserBusinesses_UserBusinessId",
+                        column: x => x.UserBusinessId,
+                        principalTable: "UserBusinesses",
+                        principalColumn: "Id");
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Addresses_UserCommonId",
                 table: "Addresses",
@@ -335,6 +349,11 @@ namespace AutoPartsServiceWebApi.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Reviews_ServiceId",
+                table: "Reviews",
+                column: "ServiceId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Reviews_UserBusinessId",
                 table: "Reviews",
                 column: "UserBusinessId");
@@ -343,6 +362,11 @@ namespace AutoPartsServiceWebApi.Migrations
                 name: "IX_Services_UserBusinessId",
                 table: "Services",
                 column: "UserBusinessId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Services_UserCommonId",
+                table: "Services",
+                column: "UserCommonId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Smses_UserBusinessId",
@@ -380,13 +404,13 @@ namespace AutoPartsServiceWebApi.Migrations
                 name: "Reviews");
 
             migrationBuilder.DropTable(
-                name: "Services");
-
-            migrationBuilder.DropTable(
                 name: "Smses");
 
             migrationBuilder.DropTable(
                 name: "Requests");
+
+            migrationBuilder.DropTable(
+                name: "Services");
 
             migrationBuilder.DropTable(
                 name: "UserBusinesses");

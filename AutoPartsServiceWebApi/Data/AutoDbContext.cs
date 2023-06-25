@@ -6,9 +6,28 @@ namespace AutoPartsServiceWebApi.Data
 {
     public class AutoDbContext : DbContext
     {
+        private readonly string _connectionString;
+
         public AutoDbContext(DbContextOptions<AutoDbContext> options)
             : base(options)
         {
+        }
+
+        public AutoDbContext(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!string.IsNullOrEmpty(_connectionString))
+            {
+                optionsBuilder.UseSqlServer(_connectionString);
+            }
+            else
+            {
+                base.OnConfiguring(optionsBuilder);
+            }
         }
 
         public DbSet<Car> Cars { get; set; }
@@ -68,15 +87,10 @@ namespace AutoPartsServiceWebApi.Data
                 .WithOne(s => s.UserCommon)
                 .HasForeignKey(s => s.UserCommonId);
 
-            modelBuilder.Entity<UserBusiness>()
+            modelBuilder.Entity<UserCommon>()
                 .HasMany(ub => ub.Services)
-                .WithOne(s => s.UserBusiness)
-                .HasForeignKey(s => s.UserBusinessId);
-
-            modelBuilder.Entity<UserBusiness>()
-                .HasMany(ub => ub.Reviews)
-                .WithOne(r => r.UserBusiness)
-                .HasForeignKey(r => r.UserBusinessId);
+                .WithOne(s => s.UserCommon)
+                .HasForeignKey(s => s.UserCommonId);
 
             modelBuilder.Entity<UserBusiness>()
                 .HasMany(ub => ub.SmsList)
@@ -140,6 +154,13 @@ namespace AutoPartsServiceWebApi.Data
             modelBuilder.Entity<Address>()
                 .Property(a => a.Street)
                 .IsRequired(false);
+
+            modelBuilder.Entity<Service>()
+                .HasMany(s => s.Reviews)
+                .WithOne(r => r.Service)
+                .HasForeignKey(r => r.ServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }

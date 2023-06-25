@@ -1,6 +1,6 @@
 ﻿namespace AutoPartsServiceWebApi.Models
 {
-    public class UserInfoRequest
+    public class UserRequest
     {
         public string Jwt { get; set; }
         public string DeviceId { get; set; }

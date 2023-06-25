@@ -14,12 +14,10 @@ namespace AutoPartsServiceWebApi.Data
         public void CreateDatabase(string ip, string login, string password, string databaseName)
         {
             var connectionString = $"Server={ip};Database={databaseName};User Id={login};Password={password};TrustServerCertificate=True;";
-            var optionsBuilder = new DbContextOptionsBuilder<AutoDbContext>();
-            optionsBuilder.UseSqlServer(connectionString);
 
-            using (var context = new AutoDbContext(optionsBuilder.Options))
+            using (var context = new AutoDbContext(connectionString))
             {
-                context.Database.EnsureCreated();
+                context.Database.Migrate();
             }
 
             var json = File.ReadAllText("appsettings.json");
@@ -29,13 +27,12 @@ namespace AutoPartsServiceWebApi.Data
             File.WriteAllText("appsettings.json", output);
         }
 
+
         public void CreateLocalDatabase(string databaseName)
         {
             var connectionString = $"Server=(localdb)\\mssqllocaldb;Database={databaseName};Trusted_Connection=True;MultipleActiveResultSets=true";
-            var optionsBuilder = new DbContextOptionsBuilder<AutoDbContext>();
-            optionsBuilder.UseSqlServer(connectionString);
 
-            using (var context = new AutoDbContext(optionsBuilder.Options))
+            using (var context = new AutoDbContext(connectionString))
             {
                 context.Database.EnsureCreated();
             }

@@ -7,8 +7,11 @@ namespace AutoPartsServiceWebApi
     {
         public bool Success { get; set; }
         public string Message { get; set; }
+        public string Jwt { get; set; }
+        public string DeviceId { get; set; }
         public T Data { get; set; }
     }
+
 
     public class UploadFileOperation : IOperationFilter
     {
