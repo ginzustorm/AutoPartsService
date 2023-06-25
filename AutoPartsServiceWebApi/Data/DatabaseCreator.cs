@@ -13,18 +13,15 @@ namespace AutoPartsServiceWebApi.Data
 
         public void CreateDatabase(string ip, string login, string password, string databaseName)
         {
-            var connectionString = $"Server={ip};Database={databaseName};User Id={login};Password={password};TrustServerCertificate=True;";
+            var connectionString = $"Server={ip};Database={databaseName};User Id={login};Password={password};";
+
+            var optionsBuilder = new DbContextOptionsBuilder<AutoDbContext>();
+            optionsBuilder.UseSqlServer(connectionString);
 
             using (var context = new AutoDbContext(connectionString))
             {
                 context.Database.Migrate();
             }
-
-            var json = File.ReadAllText("appsettings.json");
-            dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
-            jsonObj["ConnectionStrings"]["DefaultConnection"] = connectionString;
-            string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
-            File.WriteAllText("appsettings.json", output);
         }
 
 

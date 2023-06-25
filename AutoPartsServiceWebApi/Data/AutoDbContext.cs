@@ -8,11 +8,6 @@ namespace AutoPartsServiceWebApi.Data
     {
         private readonly string _connectionString;
 
-        public AutoDbContext(DbContextOptions<AutoDbContext> options)
-            : base(options)
-        {
-        }
-
         public AutoDbContext(string connectionString)
         {
             _connectionString = connectionString;
