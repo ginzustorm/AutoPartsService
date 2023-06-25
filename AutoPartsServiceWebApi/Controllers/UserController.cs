@@ -28,6 +28,20 @@ namespace AutoPartsServiceWebApi.Controllers
         [HttpPost("addCar")]
         public async Task<ActionResult<ApiResponse<List<ResponseCarDto>>>> AddCar([FromBody] AddCarRequest request)
         {
+            var userCheck = await _context.UserCommons
+                .Include(u => u.Devices)
+                .FirstOrDefaultAsync(u => u.Devices.Any(d => d.DeviceId == request.DeviceId));
+            if (userCheck == null || userCheck.Jwt != request.Jwt)
+            {
+                return Ok(new ApiResponse<List<ResponseCarDto>>
+                {
+                    Success = false,
+                    Message = "Invalid DeviceId or Jwt.",
+                    Jwt = request.Jwt,
+                    Data = null
+                });
+            }
+
             var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
             if (!validationResponse.Success)
             {
@@ -76,6 +90,20 @@ namespace AutoPartsServiceWebApi.Controllers
         [HttpPost("deleteCar")]
         public async Task<ActionResult<ApiResponse<List<ResponseCarDto>>>> DeleteCar([FromBody] CarIdDeviceJwtDto request)
         {
+            var userCheck = await _context.UserCommons
+                            .Include(u => u.Devices)
+                            .FirstOrDefaultAsync(u => u.Devices.Any(d => d.DeviceId == request.DeviceId));
+            if (userCheck == null || userCheck.Jwt != request.Jwt)
+            {
+                return Ok(new ApiResponse<List<ResponseCarDto>>
+                {
+                    Success = false,
+                    Message = "Invalid DeviceId or Jwt.",
+                    Jwt = request.Jwt,
+                    Data = null
+                });
+            }
+
             var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
             if (!validationResponse.Success)
             {
@@ -128,6 +156,20 @@ namespace AutoPartsServiceWebApi.Controllers
         [HttpPost("addService")]
         public async Task<ActionResult<ApiResponse<List<ServiceDto>>>> AddService([FromBody] ServiceDeviceJwtDto request)
         {
+            var userCheck = await _context.UserCommons
+                .Include(u => u.Devices)
+                .FirstOrDefaultAsync(u => u.Devices.Any(d => d.DeviceId == request.DeviceId));
+            if (userCheck == null || userCheck.Jwt != request.Jwt)
+            {
+                return Ok(new ApiResponse<List<ResponseCarDto>>
+                {
+                    Success = false,
+                    Message = "Invalid DeviceId or Jwt.",
+                    Jwt = request.Jwt,
+                    Data = null
+                });
+            }
+
             try
             {
                 if (string.IsNullOrEmpty(request.DeviceId) || string.IsNullOrEmpty(request.Jwt) || request.Data == null)
@@ -221,6 +263,20 @@ namespace AutoPartsServiceWebApi.Controllers
         [HttpPost("deleteService")]
         public async Task<ActionResult<ApiResponse<List<ServiceDto>>>> DeleteService([FromBody] ServiceIdDeviceJwtDto request)
         {
+            var userCheck = await _context.UserCommons
+                .Include(u => u.Devices)
+                .FirstOrDefaultAsync(u => u.Devices.Any(d => d.DeviceId == request.DeviceId));
+            if (userCheck == null || userCheck.Jwt != request.Jwt)
+            {
+                return Ok(new ApiResponse<List<ResponseCarDto>>
+                {
+                    Success = false,
+                    Message = "Invalid DeviceId or Jwt.",
+                    Jwt = request.Jwt,
+                    Data = null
+                });
+            }
+
             var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
             if (!validationResponse.Success)
             {
@@ -267,6 +323,20 @@ namespace AutoPartsServiceWebApi.Controllers
         [HttpPost("myServices")]
         public async Task<ActionResult<ApiResponse<List<ServiceDto>>>> MyServices([FromBody] DeviceJwtDto request)
         {
+            var userCheck = await _context.UserCommons
+                .Include(u => u.Devices)
+                .FirstOrDefaultAsync(u => u.Devices.Any(d => d.DeviceId == request.DeviceId));
+            if (userCheck == null || userCheck.Jwt != request.Jwt)
+            {
+                return Ok(new ApiResponse<List<ResponseCarDto>>
+                {
+                    Success = false,
+                    Message = "Invalid DeviceId or Jwt.",
+                    Jwt = request.Jwt,
+                    Data = null
+                });
+            }
+
             var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
             if (!validationResponse.Success)
             {
@@ -325,6 +395,20 @@ namespace AutoPartsServiceWebApi.Controllers
         [HttpPost("addReview")]
         public async Task<ActionResult<ApiResponse<List<ReviewDto>>>> AddReview([FromBody] AddReviewRequest request)
         {
+            var userCheck = await _context.UserCommons
+                .Include(u => u.Devices)
+                .FirstOrDefaultAsync(u => u.Devices.Any(d => d.DeviceId == request.DeviceId));
+            if (userCheck == null || userCheck.Jwt != request.Jwt)
+            {
+                return Ok(new ApiResponse<List<ResponseCarDto>>
+                {
+                    Success = false,
+                    Message = "Invalid DeviceId or Jwt.",
+                    Jwt = request.Jwt,
+                    Data = null
+                });
+            }
+
             var validationResponse = await ValidateUser(request.DeviceId, request.Jwt);
             if (!validationResponse.Success)
             {
