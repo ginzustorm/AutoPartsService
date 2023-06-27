@@ -14,6 +14,7 @@ using AutoPartsServiceWebApi.Dto;
 using System.Net;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Hosting;
+using AutoPartsServiceWebApi.Tools;
 
 namespace AutoPartsServiceWebApi.Controllers
 {
@@ -60,7 +61,7 @@ namespace AutoPartsServiceWebApi.Controllers
         public async Task<ActionResult<ApiResponse<object>>> Authenticate([FromBody] AuthenticateRequest request)
         {
             var loginSms = await _context.LoginSmses
-                .FirstOrDefaultAsync(ls => ls.PhoneNumber == request.PhoneNumber && ls.SmsCode == request.SmsCode && ls.DeviceId == request.DeviceId);
+                .Where(ls => ls.PhoneNumber == request.PhoneNumber && ls.SmsCode == request.SmsCode && ls.DeviceId == request.DeviceId).OrderByDescending(ls=> ls.Id).FirstOrDefaultAsync();
 
             if (loginSms == null)
             {
@@ -147,13 +148,13 @@ namespace AutoPartsServiceWebApi.Controllers
 
 
         [HttpPost("updateUser")]
-        public async Task<ActionResult<ApiResponse<string>>> UpdateUser([FromBody] UpdateUserRequest request)
+        public async Task<ActionResult<ApiResponse<object>>> UpdateUser([FromBody] UpdateUserRequest request)
         {
             var userCommon = await _context.UserCommons.Include(uc => uc.Address).FirstOrDefaultAsync(uc => uc.Jwt == request.Jwt && uc.Devices.Any(d => d.DeviceId == request.DeviceId));
 
             if (userCommon == null)
             {
-                return new ApiResponse<string>
+                return new ApiResponse<object>
                 {
                     Success = false,
                     Message = "User not found."
@@ -181,6 +182,73 @@ namespace AutoPartsServiceWebApi.Controllers
                 _context.Addresses.Update(userCommon.Address);
             }
 
+            //// Check if the Avatar field is not null or empty and then convert it to byte array and save
+            //if (!string.IsNullOrEmpty(request.Data.Avatar))
+            //{
+            //    string fileName = $"{userCommon.Id}_avatar.jpg";
+            //    string imageUrl = SaveImage(request.Data.Avatar, fileName);
+            //    userCommon.Avatar = imageUrl;
+            //}
+
+            var device = userCommon.Devices?.FirstOrDefault(d => d.DeviceId == request.DeviceId);
+            if (device != null)
+            {
+                // 
+            }
+
+            await _context.SaveChangesAsync();
+            var userCommonDTO = new UserCommonDto
+            {
+                Id = userCommon.Id,
+                Name = userCommon.Name,
+                Email = userCommon.Email,
+                PhoneNumber = userCommon.PhoneNumber,
+                RegistrationDate = userCommon.RegistrationDate,
+                Password = userCommon.Password,
+                Avatar = userCommon.Avatar
+            };
+
+            // Check if userCommon.Address is not null
+            if (userCommon.Address != null)
+            {
+                userCommonDTO.Address = new AutoPartsServiceWebApi.Dto.AddressDto
+                {
+                    Country = userCommon.Address.Country,
+                    Region = userCommon.Address.Region,
+                    City = userCommon.Address.City,
+                    Street = userCommon.Address.Street
+                };
+            }
+
+            return new ApiResponse<object>
+            {
+                Success = true,
+                Message = "User updated.",
+                Jwt = request.Jwt,
+                Data = userCommonDTO
+            };
+        }
+
+
+        [HttpPost("UpdateAvaUser")]
+        public async Task<ActionResult<ApiResponse<string>>> UpdateAvaUser([FromBody] UpdateUserRequest request)
+        {
+            var userCommon = await _context.UserCommons.Include(uc => uc.Address).FirstOrDefaultAsync(uc => uc.Jwt == request.Jwt && uc.Devices.Any(d => d.DeviceId == request.DeviceId));
+
+            if (userCommon == null)
+            {
+                return new ApiResponse<string>
+                {
+                    Success = false,
+                    Message = "User not found."
+                };
+            }
+
+
+
+            
+          
+
             // Check if the Avatar field is not null or empty and then convert it to byte array and save
             if (!string.IsNullOrEmpty(request.Data.Avatar))
             {
@@ -204,9 +272,6 @@ namespace AutoPartsServiceWebApi.Controllers
                 Jwt = request.Jwt
             };
         }
-
-
-
 
 
         [HttpPost("userInfo")]
@@ -316,26 +381,10 @@ namespace AutoPartsServiceWebApi.Controllers
 
         private async Task SendSmsAsync(string phoneNumber, string message, string sender = "SMS", DateTime? datetime = null, int sms_lifetime = 0, int type = 2)
         {
-            var datetimeParam = datetime.HasValue ? datetime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "";
+            SMSC sMSC = new SMSC();
+            sMSC.send_sms(phoneNumber, "Код: " + message);
 
-            string url = $"https://api.atompark.com/sms/3.0/sendSMS?key=publicKey&sum=controlSum&sender={sender}&text={message}&phone={phoneNumber}&datetime={datetimeParam}&sms_lifetime={sms_lifetime}&type={type}";
-
-            var httpClient = new HttpClient();
-            HttpResponseMessage response = await httpClient.GetAsync(url);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception("SMS sending failed");
-            }
-
-            string resultContent = await response.Content.ReadAsStringAsync();
-
-            var result = JsonConvert.DeserializeObject<dynamic>(resultContent);
-
-            if (result.result == null)
-            {
-                throw new Exception("Error during SMS sending. No result received.");
-            }
+            
         }
 
         private string SaveImage(string base64Image, string fileName)
