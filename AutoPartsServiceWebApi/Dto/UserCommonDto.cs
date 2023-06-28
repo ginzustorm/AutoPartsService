@@ -14,5 +14,7 @@ namespace AutoPartsServiceWebApi.Dto
         public List<CarDto> Cars { get; set; }
         public List<ServiceDto> Services { get; set; }
         public string Avatar { get; set; }
+        public ICollection<RequestCategoryDto> RequestCategories { get; set; }
+        public List<RequestDto> Requests { get; set; }
     }
 }

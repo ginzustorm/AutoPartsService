@@ -9,4 +9,23 @@
         public string VinNumber { get; set; }
     }
 
+    public class CarIdDeviceJwtDto
+    {
+        public int CarId { get; set; }
+        public string DeviceId { get; set; }
+        public string Jwt { get; set; }
+    }
+
+    public class CarIdDto
+    {
+        public int Id { get; set; }
+    }
+
+    public class CarDeviceJwtDto
+    {
+        public string DeviceId { get; set; }
+        public string Jwt { get; set; }
+        public CarIdDto Data { get; set; }
+    }
+
 }

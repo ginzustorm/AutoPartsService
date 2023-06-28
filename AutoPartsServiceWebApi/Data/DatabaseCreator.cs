@@ -3,27 +3,32 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using Microsoft.Extensions.DependencyInjection;
+
 
 namespace AutoPartsServiceWebApi.Data
 {
     public class DatabaseCreator
     {
         private readonly IConfiguration _configuration;
+        private readonly IServiceProvider _serviceProvider;
 
-        public DatabaseCreator(IConfiguration configuration)
+        public DatabaseCreator(IServiceProvider serviceProvider)
         {
-            _configuration = configuration;
+            _serviceProvider = serviceProvider;
         }
 
         public void CreateDatabase(string ip, string login, string password, string databaseName)
         {
             var connectionString = $"Server={ip};Database={databaseName};User Id={login};Password={password};TrustServerCertificate=True;";
 
-            var optionsBuilder = new DbContextOptionsBuilder<AutoDbContext>();
-            optionsBuilder.UseSqlServer(connectionString);
-
-            using (var context = new AutoDbContext(optionsBuilder.Options))
+            using (var scope = _serviceProvider.CreateScope())
             {
+                var options = new DbContextOptionsBuilder<AutoDbContext>()
+                    .UseSqlServer(connectionString)
+                    .Options;
+
+                var context = scope.ServiceProvider.GetRequiredService<AutoDbContext>();
                 context.Database.Migrate();
             }
 
@@ -50,11 +55,13 @@ namespace AutoPartsServiceWebApi.Data
         {
             var connectionString = $"Server=(localdb)\\mssqllocaldb;Database={databaseName};Trusted_Connection=True;";
 
-            var optionsBuilder = new DbContextOptionsBuilder<AutoDbContext>();
-            optionsBuilder.UseSqlServer(connectionString);
-
-            using (var context = new AutoDbContext(optionsBuilder.Options))
+            using (var scope = _serviceProvider.CreateScope())
             {
+                var options = new DbContextOptionsBuilder<AutoDbContext>()
+                    .UseSqlServer(connectionString)
+                    .Options;
+
+                var context = scope.ServiceProvider.GetRequiredService<AutoDbContext>();
                 context.Database.Migrate();
             }
 

@@ -1,8 +1,6 @@
-﻿using System;
-
-namespace AutoPartsServiceWebApi.Models
+﻿namespace AutoPartsServiceWebApi.Dto
 {
-    public class Request
+    public class RequestDto
     {
         public int Id { get; set; }
         public DateTime CreationDate { get; set; }
@@ -11,10 +9,7 @@ namespace AutoPartsServiceWebApi.Models
         public decimal Price { get; set; }
         public bool Active { get; set; }
         public string Category { get; set; }
-        public int UserCommonId { get; set; }
-        public UserCommon UserCommon { get; set; }
-        public virtual ICollection<Offer> Offers { get; set; }
-
     }
+
 
 }

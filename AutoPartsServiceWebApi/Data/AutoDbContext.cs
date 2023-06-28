@@ -6,11 +6,11 @@ namespace AutoPartsServiceWebApi.Data
 {
     public class AutoDbContext : DbContext
     {
-        private readonly string _connectionString;
+        // readonly string _connectionString;
 
         public AutoDbContext(DbContextOptions<AutoDbContext> options) : base(options) { }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        /*protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!string.IsNullOrEmpty(_connectionString))
             {
@@ -20,7 +20,7 @@ namespace AutoPartsServiceWebApi.Data
             {
                 base.OnConfiguring(optionsBuilder);
             }
-        }
+        }*/
 
         public DbSet<Car> Cars { get; set; }
         public DbSet<UserCommon> UserCommons { get; set; }
@@ -34,6 +34,8 @@ namespace AutoPartsServiceWebApi.Data
         public DbSet<DocumentUser> Documents { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Offer> Offers { get; set; }
+        public DbSet<RequestCategory> RequestCategories { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -64,15 +66,16 @@ namespace AutoPartsServiceWebApi.Data
                 .Property(d => d.UserCommonId)
                 .IsRequired(false);
 
+            modelBuilder.Entity<UserCommon>()
+                    .HasMany(uc => uc.Requests)
+                    .WithOne(r => r.UserCommon)
+                    .HasForeignKey(r => r.UserCommonId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<UserBusiness>()
                 .HasMany(ub => ub.Devices)
                 .WithOne(d => d.UserBusiness)
                 .HasForeignKey(d => d.UserBusinessId);
-
-            modelBuilder.Entity<UserCommon>()
-                .HasOne(uc => uc.Request)
-                .WithOne(r => r.UserCommon)
-                .HasForeignKey<Request>(r => r.UserCommonId);
 
             modelBuilder.Entity<UserCommon>()
                 .HasMany(uc => uc.SmsList)
@@ -102,15 +105,10 @@ namespace AutoPartsServiceWebApi.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Offer>()
-                .HasOne(o => o.UserCommon)
+                .HasOne(o => o.User)
                 .WithMany(uc => uc.Offers)
                 .HasForeignKey(o => o.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Offer>()
-                .HasOne(o => o.Request)
-                .WithMany(r => r.Offers)
-                .HasForeignKey(o => o.RequestId);
 
             modelBuilder.Entity<UserCommon>()
                 .Property(uc => uc.Name)
@@ -153,6 +151,17 @@ namespace AutoPartsServiceWebApi.Data
                 .HasForeignKey(r => r.ServiceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<UserCommon>()
+                .HasMany(uc => uc.RequestCategories)
+                .WithOne(rc => rc.UserCommon)
+                .HasForeignKey(rc => rc.UserCommonId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Offer>()
+                .HasOne(o => o.Request)
+                .WithMany(r => r.Offers)
+                .HasForeignKey(o => o.RequestId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

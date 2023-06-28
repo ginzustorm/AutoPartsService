@@ -1,8 +1,7 @@
-﻿namespace AutoPartsServiceWebApi.Models
+﻿namespace AutoPartsServiceWebApi.Dto
 {
-    public class LoginSms
+    public class LoginSmsDto
     {
-        public int Id { get; set; }
         public string PhoneNumber { get; set; }
         public string DeviceId { get; set; }
         public DateTime CreationDate { get; set; }

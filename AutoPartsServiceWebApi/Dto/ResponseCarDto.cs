@@ -9,5 +9,5 @@
         public string StateNumber { get; set; }
         public string VinNumber { get; set; }
     }
-
+    
 }

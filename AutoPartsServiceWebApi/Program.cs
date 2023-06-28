@@ -1,17 +1,10 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.EntityFrameworkCore;
 using AutoPartsServiceWebApi.Data;
-using Microsoft.OpenApi.Models;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using AutoPartsServiceWebApi.Services;
 using AutoPartsServiceWebApi;
-using Swashbuckle.AspNetCore.SwaggerGen;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using System.Text.Json.Serialization;
+using AutoMapper;
 
 internal class Program
 {
@@ -20,17 +13,24 @@ internal class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
+        builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
         builder.Services.AddControllers().AddJsonOptions(x =>
             x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve);
         builder.Services.AddDbContext<AutoDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
         builder.Services.AddSingleton<DatabaseCreator>();
+
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<ISmsService, SmsService>();
+        builder.Services.AddScoped<IRequestService, RequestService>();
+        builder.Services.AddScoped<IServiceService, ServiceService>();
+        builder.Services.AddScoped<ICarService, CarService>();
+        builder.Services.AddScoped<IReviewService, ReviewService>();
 
         builder.Services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
-
-            c.OperationFilter<UploadFileOperation>();
         });
 
         var app = builder.Build();
