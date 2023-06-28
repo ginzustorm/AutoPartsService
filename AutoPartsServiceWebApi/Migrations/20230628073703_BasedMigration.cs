@@ -221,7 +221,7 @@ namespace AutoPartsServiceWebApi.Migrations
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Category = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Avatar = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    Avatar = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     AverageScore = table.Column<double>(type: "float", nullable: false),
                     UserCommonId = table.Column<int>(type: "int", nullable: false),
                     UserBusinessId = table.Column<int>(type: "int", nullable: true)
