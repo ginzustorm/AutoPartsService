@@ -122,19 +122,29 @@ namespace AutoPartsServiceWebApi.Services
 
         public async Task<List<ServiceWithUserDto>> GetAllServices(OptionalCategoryDto optionalCategoryDto)
         {
-            IQueryable<Service> query = _context.Services.Include(s => s.UserCommon);
+            IQueryable<Service> query;
 
-            //if (!string.IsNullOrEmpty(optionalCategoryDto.Category))
-            //{
-            //    query = query.Where(s => s.Category == optionalCategoryDto.Category);
-            //}
+            if (!string.IsNullOrEmpty(optionalCategoryDto.Category))
+            {
+                if (optionalCategoryDto.Category.ToLower() == "all")
+                {
+                    query = _context.Services.Include(s => s.UserCommon);
+                }
+                else
+                {
+                    query = _context.Services.Where(s => s.Category == optionalCategoryDto.Category).Include(s => s.UserCommon);
+                }
+            }
+            else
+            {
+                throw new Exception("Category field must not be empty.");
+            }
 
             var services = await query.ToListAsync();
             var serviceDtos = _mapper.Map<List<ServiceWithUserDto>>(services);
 
             return serviceDtos;
         }
-
 
 
         public async Task<ApiResponse<ServiceDto>> GetServiceById(ServiceDtoId request)
