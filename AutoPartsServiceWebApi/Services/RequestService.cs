@@ -217,14 +217,16 @@ namespace AutoPartsServiceWebApi.Services
                 throw new Exception("User not found.");
             }
 
-            var request = await _context.Requests.FindAsync(requestIdDto.Id);
+            var request = await _context.Requests
+                .Include(r => r.Offers)  
+                .FirstOrDefaultAsync(r => r.Id == requestIdDto.Id);
 
             if (request == null)
             {
                 throw new Exception("Request not found.");
             }
 
-            var requestDto = _mapper.Map<RequestDto>(request);
+            var requestDto = _mapper.Map<RequestDto>(request);  
 
             var apiResponse = new ApiResponse<RequestDto>
             {
@@ -237,6 +239,7 @@ namespace AutoPartsServiceWebApi.Services
 
             return apiResponse;
         }
+
 
     }
 }

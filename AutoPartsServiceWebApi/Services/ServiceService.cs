@@ -124,10 +124,10 @@ namespace AutoPartsServiceWebApi.Services
         {
             IQueryable<Service> query = _context.Services.Include(s => s.UserCommon);
 
-            if (!string.IsNullOrEmpty(optionalCategoryDto.Category))
-            {
-                query = query.Where(s => s.Category == optionalCategoryDto.Category);
-            }
+            //if (!string.IsNullOrEmpty(optionalCategoryDto.Category))
+            //{
+            //    query = query.Where(s => s.Category == optionalCategoryDto.Category);
+            //}
 
             var services = await query.ToListAsync();
             var serviceDtos = _mapper.Map<List<ServiceWithUserDto>>(services);

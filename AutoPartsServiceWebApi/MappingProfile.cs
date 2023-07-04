@@ -20,7 +20,7 @@ namespace AutoPartsServiceWebApi
             CreateMap<Request, RequestDto>();
             CreateMap<Offer, OfferDto>();
             CreateMap<UserCommon, UserCredentialsDto>();
-            CreateMap<Service, ServiceWithUserDto>();
+            //CreateMap<Service, ServiceWithUserDto>();
             CreateMap<Review, ReviewDto>();
             CreateMap<ReviewDto, Review>();
             CreateMap<Service, ServiceDto>()
