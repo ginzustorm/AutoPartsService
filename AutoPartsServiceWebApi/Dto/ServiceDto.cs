@@ -8,7 +8,8 @@
         public double Price { get; set; }
         public string Category { get; set; }
         public string Avatar { get; set; }
-        public decimal AverageScore { get; set; }
+        public double AverageScore { get; set; }
+        public List<ReviewDto> Reviews { get; set; }
     }
 
     public class ServiceDeviceJwtDto
@@ -23,7 +24,7 @@
         public string DeviceId { get; set; }
         public int ServiceId { get; set; }
         public string Jwt { get; set; }
-        public int Id { get; set; }
+        //public int Id { get; set; }
     }
 
     public class ServiceIdDto

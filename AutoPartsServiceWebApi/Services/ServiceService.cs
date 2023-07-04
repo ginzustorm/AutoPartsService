@@ -135,6 +135,8 @@ namespace AutoPartsServiceWebApi.Services
             return serviceDtos;
         }
 
+
+
         public async Task<ApiResponse<ServiceDto>> GetServiceById(ServiceDtoId request)
         {
             var deviceJwtDto = new DeviceJwtDto
@@ -154,7 +156,9 @@ namespace AutoPartsServiceWebApi.Services
                 };
             }
 
-            var service = await _context.Services.FirstOrDefaultAsync(s => s.Id == request.ServiceId);
+            var service = await _context.Services
+                .Include(s => s.Reviews)
+                .FirstOrDefaultAsync(s => s.Id == request.ServiceId);
             if (service == null)
             {
                 return new ApiResponse<ServiceDto>
