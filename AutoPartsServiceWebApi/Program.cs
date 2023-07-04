@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 using AutoMapper;
+using AutoPartsServiceWebApi.Models;
 
 internal class Program
 {
@@ -16,6 +17,12 @@ internal class Program
         builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
         builder.Services.AddControllers().AddJsonOptions(x =>
             x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve);
+        //
+        builder.Services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        });
+
         builder.Services.AddDbContext<AutoDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 

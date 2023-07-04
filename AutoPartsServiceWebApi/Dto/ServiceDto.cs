@@ -30,4 +30,11 @@
     {
         public int Id { get; set; }
     }
+    
+    public class ServiceDtoId
+    {
+        public string Jwt { get; set; }
+        public string DeviceId { get; set; }
+        public int ServiceId { get; set; }
+    }
 }

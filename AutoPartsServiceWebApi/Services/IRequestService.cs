@@ -10,6 +10,6 @@ namespace AutoPartsServiceWebApi.Services
         Task<ApiResponse<List<RequestDto>>> GetAvailableRequestsForUser(string jwt, string deviceId);
         Task<ApiResponse<OfferDto>> CreateOffer(CreateOfferDto createOfferDto);
         Task<ApiResponse<OfferDto>> AcceptOffer(AcceptOfferDto acceptOfferDto);
-
+        Task<ApiResponse<RequestDto>> GetRequestById(RequestIdDto requestIdDto);
     }
 }

@@ -134,6 +134,48 @@ namespace AutoPartsServiceWebApi.Services
 
             return serviceDtos;
         }
+
+        public async Task<ApiResponse<ServiceDto>> GetServiceById(ServiceDtoId request)
+        {
+            var deviceJwtDto = new DeviceJwtDto
+            {
+                Jwt = request.Jwt,
+                DeviceId = request.DeviceId
+            };
+
+            var userCommon = await _userService.GetUserByDeviceJwt(deviceJwtDto);
+
+            if (userCommon == null)
+            {
+                return new ApiResponse<ServiceDto>
+                {
+                    Success = false,
+                    Message = "Invalid DeviceId or Jwt.",
+                };
+            }
+
+            var service = await _context.Services.FirstOrDefaultAsync(s => s.Id == request.ServiceId);
+            if (service == null)
+            {
+                return new ApiResponse<ServiceDto>
+                {
+                    Success = false,
+                    Message = "Service not found.",
+                };
+            }
+
+            var serviceDto = _mapper.Map<ServiceDto>(service);
+
+            return new ApiResponse<ServiceDto>
+            {
+                Success = true,
+                Message = "Service fetched successfully.",
+                Jwt = request.Jwt,
+                Data = serviceDto
+            };
+        }
+
+
     }
 
 }

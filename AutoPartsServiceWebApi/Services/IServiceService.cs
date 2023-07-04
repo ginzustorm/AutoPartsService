@@ -8,5 +8,6 @@ namespace AutoPartsServiceWebApi.Services
         Task<ApiResponse<List<ServiceDto>>> DeleteService(ServiceIdDeviceJwtDto request);
         Task<ApiResponse<List<ServiceDto>>> GetUserServices(DeviceJwtDto request);
         Task<List<ServiceWithUserDto>> GetAllServices(OptionalCategoryDto optionalCategoryDto);
+        Task<ApiResponse<ServiceDto>> GetServiceById(ServiceDtoId request);
     }
 }

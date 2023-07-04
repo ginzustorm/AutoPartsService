@@ -145,18 +145,23 @@ namespace AutoPartsServiceWebApi.Controllers
         }
 
 
-        [HttpPost("uploadImage")]
-        public ActionResult<ApiResponse<string>> UploadImage([FromBody] ImageUploadDto imageUploadDto)
+        [HttpPost("uploadImage"), DisableRequestSizeLimit]
+        public async Task<ActionResult<ApiResponse<string>>> UploadImage(IFormFile image)
         {
-            if (imageUploadDto.ImageData == null || imageUploadDto.ImageData.Length == 0)
+            if (image == null || image.Length == 0)
                 return new ApiResponse<string>
                 {
                     Success = false,
                     Message = "No image data provided."
                 };
 
+            // Convert the image to byte array
+            using var memoryStream = new MemoryStream();
+            await image.CopyToAsync(memoryStream);
+            var imageData = memoryStream.ToArray();
+
             // Save image to wwwroot/images directory and get the URL
-            var imageUrl = SaveImage(imageUploadDto.ImageData);
+            var imageUrl = SaveImage(imageData);
 
             return new ApiResponse<string>
             {
@@ -165,6 +170,7 @@ namespace AutoPartsServiceWebApi.Controllers
                 Data = imageUrl
             };
         }
+
 
         private string SaveImage(byte[] imageData)
         {

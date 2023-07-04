@@ -207,5 +207,36 @@ namespace AutoPartsServiceWebApi.Services
             return apiResponse;
         }
 
+        public async Task<ApiResponse<RequestDto>> GetRequestById(RequestIdDto requestIdDto)
+        {
+            var userCommon = await _context.UserCommons
+                .FirstOrDefaultAsync(uc => uc.Jwt == requestIdDto.Jwt && uc.Devices.Any(d => d.DeviceId == requestIdDto.DeviceId));
+
+            if (userCommon == null)
+            {
+                throw new Exception("User not found.");
+            }
+
+            var request = await _context.Requests.FindAsync(requestIdDto.Id);
+
+            if (request == null)
+            {
+                throw new Exception("Request not found.");
+            }
+
+            var requestDto = _mapper.Map<RequestDto>(request);
+
+            var apiResponse = new ApiResponse<RequestDto>
+            {
+                Success = true,
+                Message = "Request fetched successfully.",
+                Jwt = requestIdDto.Jwt,
+                DeviceId = requestIdDto.DeviceId,
+                Data = requestDto
+            };
+
+            return apiResponse;
+        }
+
     }
 }

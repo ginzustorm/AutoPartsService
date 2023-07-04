@@ -12,12 +12,14 @@ namespace AutoPartsServiceWebApi.Services
         private readonly AutoDbContext _context;
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
+        private readonly IUserService _userService;
 
-        public CarService(AutoDbContext context, IMapper mapper, IConfiguration configuration)
+        public CarService(AutoDbContext context, IMapper mapper, IConfiguration configuration, IUserService userService)
         {
             _context = context;
             _mapper = mapper;
             _configuration = configuration;
+            _userService = userService;
         }
 
         public async Task<ApiResponse<List<ResponseCarDto>>> AddCar(AddCarRequest request)
@@ -100,20 +102,23 @@ namespace AutoPartsServiceWebApi.Services
 
         public async Task<ApiResponse<List<ResponseCarDto>>> GetUserCars(DeviceJwtDto request)
         {
-            var userCommon = await _context.UserCommons
-                .Include(uc => uc.Cars)
-                .FirstOrDefaultAsync(uc => uc.Devices.Any(d => d.DeviceId == request.DeviceId) && uc.Jwt == request.Jwt);
+            // Assuming that userCommon is your user object
+            var userCommon = await _userService.GetUserByDeviceJwt(request);
 
             if (userCommon == null)
             {
                 return new ApiResponse<List<ResponseCarDto>>
                 {
                     Success = false,
-                    Message = "Invalid DeviceId or Jwt."
+                    Message = "User not found."
                 };
             }
 
-            var carDtos = _mapper.Map<List<ResponseCarDto>>(userCommon.Cars);
+            var cars = await _context.Cars
+                .Where(c => c.UserCommonId == userCommon.Id)
+                .ToListAsync();
+
+            var carDtos = _mapper.Map<List<ResponseCarDto>>(cars);
 
             return new ApiResponse<List<ResponseCarDto>>
             {
@@ -124,6 +129,7 @@ namespace AutoPartsServiceWebApi.Services
                 Data = carDtos
             };
         }
+
 
     }
 }

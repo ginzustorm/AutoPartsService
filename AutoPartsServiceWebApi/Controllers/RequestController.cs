@@ -113,5 +113,29 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
+        [HttpPost("getRequestById")]
+        public async Task<ActionResult<ApiResponse<RequestDto>>> GetRequestById(RequestIdDto requestIdDto)
+        {
+            try
+            {
+                var apiResponse = await _requestService.GetRequestById(requestIdDto);
+                return Ok(apiResponse);
+            }
+            catch (Exception e)
+            {
+                var apiResponse = new ApiResponse<RequestDto>
+                {
+                    Success = false,
+                    Message = e.Message,
+                    Jwt = requestIdDto.Jwt,
+                    DeviceId = requestIdDto.DeviceId,
+                    Data = null
+                };
+
+                return Ok(apiResponse);
+            }
+        }
+
+
     }
 }

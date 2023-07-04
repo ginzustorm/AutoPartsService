@@ -79,13 +79,10 @@ namespace AutoPartsServiceWebApi.Controllers
         public async Task<ActionResult<ApiResponse<List<ResponseCarDto>>>> MyCars([FromBody] DeviceJwtDto request)
         {
             var apiResponse = await _carService.GetUserCars(request);
-            if (!apiResponse.Success)
-            {
-                return Ok(apiResponse);
-            }
 
             return Ok(apiResponse);
         }
+
 
         [HttpPost("addService")]
         public async Task<ActionResult<ApiResponse<List<ServiceDto>>>> AddService([FromBody] ServiceDeviceJwtDto request)
@@ -153,6 +150,14 @@ namespace AutoPartsServiceWebApi.Controllers
                 Message = "Services fetched successfully.",
                 Data = services
             });
+        }
+
+        [HttpPost("getServiceById")]
+        public async Task<ActionResult<ApiResponse<ServiceDto>>> GetServiceById([FromBody] ServiceDtoId request)
+        {
+            var apiResponse = await _serviceService.GetServiceById(request);
+
+            return Ok(apiResponse);
         }
 
 
