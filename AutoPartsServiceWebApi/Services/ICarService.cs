@@ -7,6 +7,7 @@ namespace AutoPartsServiceWebApi.Services
     {
         Task<ApiResponse<List<ResponseCarDto>>> AddCar(AddCarRequest request);
         Task<ApiResponse<List<ResponseCarDto>>> DeleteCar(CarIdDeviceJwtDto request);
+        Task<ApiResponse<List<ResponseCarDto>>> GetUserCars(DeviceJwtDto request);
     }
 
 }

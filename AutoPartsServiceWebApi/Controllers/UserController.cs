@@ -75,7 +75,17 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
+        [HttpPost("myCars")]
+        public async Task<ActionResult<ApiResponse<List<ResponseCarDto>>>> MyCars([FromBody] DeviceJwtDto request)
+        {
+            var apiResponse = await _carService.GetUserCars(request);
+            if (!apiResponse.Success)
+            {
+                return Ok(apiResponse);
+            }
 
+            return Ok(apiResponse);
+        }
 
         [HttpPost("addService")]
         public async Task<ActionResult<ApiResponse<List<ServiceDto>>>> AddService([FromBody] ServiceDeviceJwtDto request)

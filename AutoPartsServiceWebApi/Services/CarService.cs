@@ -97,5 +97,33 @@ namespace AutoPartsServiceWebApi.Services
 
             return apiResponse;
         }
+
+        public async Task<ApiResponse<List<ResponseCarDto>>> GetUserCars(DeviceJwtDto request)
+        {
+            var userCommon = await _context.UserCommons
+                .Include(uc => uc.Cars)
+                .FirstOrDefaultAsync(uc => uc.Devices.Any(d => d.DeviceId == request.DeviceId) && uc.Jwt == request.Jwt);
+
+            if (userCommon == null)
+            {
+                return new ApiResponse<List<ResponseCarDto>>
+                {
+                    Success = false,
+                    Message = "Invalid DeviceId or Jwt."
+                };
+            }
+
+            var carDtos = _mapper.Map<List<ResponseCarDto>>(userCommon.Cars);
+
+            return new ApiResponse<List<ResponseCarDto>>
+            {
+                Success = true,
+                Message = "Cars fetched successfully.",
+                Jwt = request.Jwt,
+                DeviceId = request.DeviceId,
+                Data = carDtos
+            };
+        }
+
     }
 }
