@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AutoPartsServiceWebApi.Migrations
 {
     /// <inheritdoc />
-    public partial class BasedMigration : Migration
+    public partial class FineMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -167,26 +167,6 @@ namespace AutoPartsServiceWebApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RequestCategories",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    CategoryName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    UserCommonId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RequestCategories", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RequestCategories_UserCommons_UserCommonId",
-                        column: x => x.UserCommonId,
-                        principalTable: "UserCommons",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Requests",
                 columns: table => new
                 {
@@ -197,7 +177,6 @@ namespace AutoPartsServiceWebApi.Migrations
                     Header = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Active = table.Column<bool>(type: "bit", nullable: false),
-                    Category = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UserCommonId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -365,11 +344,6 @@ namespace AutoPartsServiceWebApi.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RequestCategories_UserCommonId",
-                table: "RequestCategories",
-                column: "UserCommonId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Requests_UserCommonId",
                 table: "Requests",
                 column: "UserCommonId");
@@ -425,9 +399,6 @@ namespace AutoPartsServiceWebApi.Migrations
 
             migrationBuilder.DropTable(
                 name: "Offers");
-
-            migrationBuilder.DropTable(
-                name: "RequestCategories");
 
             migrationBuilder.DropTable(
                 name: "Reviews");

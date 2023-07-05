@@ -161,7 +161,6 @@ namespace AutoPartsServiceWebApi.Services
                 .Include(u => u.Address)
                 .Include(u => u.Cars)
                 .Include(u => u.Services)
-                .Include(u => u.RequestCategories)
                 .Include(u => u.Requests)
                 .FirstOrDefaultAsync(uc => uc.Jwt == jwt && uc.Devices.Any(d => d.DeviceId == deviceId));
 

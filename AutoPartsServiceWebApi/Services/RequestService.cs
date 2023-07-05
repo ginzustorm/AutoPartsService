@@ -39,7 +39,10 @@ namespace AutoPartsServiceWebApi.Services
 
             await _context.SaveChangesAsync();
 
-            var activeRequests = userCommon.Requests.Where(r => r.Active).ToList();
+            var activeRequests = userCommon.Requests
+                .Where(r => r.Active)
+                .OrderByDescending(r => r.CreationDate)
+                .ToList();
 
             var activeRequestsDto = _mapper.Map<List<RequestDto>>(activeRequests);
 
@@ -55,52 +58,53 @@ namespace AutoPartsServiceWebApi.Services
             return apiResponse;
         }
 
-
-        public async Task<List<Request>> GetActiveRequests(int userId)
+        public async Task<ApiResponse<List<RequestDto>>> GetActiveRequests(string jwt, string deviceId)
         {
-            var userCommon = await _context.UserCommons
-                .Include(uc => uc.Requests)
-                .FirstOrDefaultAsync(uc => uc.Id == userId);
-
-            if (userCommon == null)
+            try
             {
-                throw new Exception("User not found.");
+                var userCommon = await _context.UserCommons
+                    .Include(uc => uc.Devices)
+                    .FirstOrDefaultAsync(uc => uc.Jwt == jwt && uc.Devices.Any(d => d.DeviceId == deviceId));
+
+                if (userCommon == null)
+                {
+                    return new ApiResponse<List<RequestDto>>
+                    {
+                        Success = false,
+                        Message = "User not found.",
+                        Jwt = jwt,
+                        DeviceId = deviceId,
+                        Data = null
+                    };
+                }
+
+                var activeRequests = await _context.Requests
+                    .Where(r => r.Active)
+                    .OrderByDescending(r => r.CreationDate)
+                    .ToListAsync();
+
+                var requestDtos = _mapper.Map<List<RequestDto>>(activeRequests);
+
+                return new ApiResponse<List<RequestDto>>
+                {
+                    Success = true,
+                    Message = "Active requests retrieved successfully.",
+                    Jwt = jwt,
+                    DeviceId = deviceId,
+                    Data = requestDtos
+                };
             }
-
-            return userCommon.Requests.Where(r => r.Active).ToList();
-        }
-
-        public async Task<ApiResponse<List<RequestDto>>> GetAvailableRequestsForUser(string jwt, string deviceId)
-        {
-            var userCommon = await _context.UserCommons
-                .Include(uc => uc.RequestCategories)
-                .FirstOrDefaultAsync(uc => uc.Jwt == jwt && uc.Devices.Any(d => d.DeviceId == deviceId));
-
-            if (userCommon == null)
+            catch (Exception e)
             {
-                throw new Exception("User not found.");
+                return new ApiResponse<List<RequestDto>>
+                {
+                    Success = false,
+                    Message = $"An error occurred while retrieving active requests: {e.Message}",
+                    Jwt = jwt,
+                    DeviceId = deviceId,
+                    Data = null
+                };
             }
-
-            // Filter the categories
-            var userCategories = userCommon.RequestCategories.Select(rc => rc.CategoryName);
-
-            // Get all the active requests excluding the ones created by the user himself
-            var availableRequests = await _context.Requests
-                .Where(r => r.Active && r.UserCommonId != userCommon.Id && userCategories.Contains(r.Category))
-                .ToListAsync();
-
-            var availableRequestsDto = _mapper.Map<List<RequestDto>>(availableRequests);
-
-            var apiResponse = new ApiResponse<List<RequestDto>>
-            {
-                Success = true,
-                Message = "Available requests fetched successfully.",
-                Jwt = jwt,
-                DeviceId = deviceId,
-                Data = availableRequestsDto
-            };
-
-            return apiResponse;
         }
 
         public async Task<ApiResponse<OfferDto>> CreateOffer(CreateOfferDto createOfferDto)
@@ -180,7 +184,6 @@ namespace AutoPartsServiceWebApi.Services
 
             // Accept the offer
             offer.Accepted = true;
-            offer.Active = false;
             _context.Offers.Update(offer);
 
             // Mark other offers as inactive
@@ -206,6 +209,78 @@ namespace AutoPartsServiceWebApi.Services
 
             return apiResponse;
         }
+
+        public async Task<ApiResponse<List<RequestDto>>> GetAcceptedRequests(string jwt, string deviceId)
+        {
+            try
+            {
+                var userCommon = await _context.UserCommons
+                    .Include(uc => uc.Devices)
+                    .FirstOrDefaultAsync(uc => uc.Jwt == jwt && uc.Devices.Any(d => d.DeviceId == deviceId));
+
+                if (userCommon == null)
+                {
+                    return new ApiResponse<List<RequestDto>>
+                    {
+                        Success = false,
+                        Message = "User not found.",
+                        Jwt = jwt,
+                        DeviceId = deviceId,
+                        Data = null
+                    };
+                }
+
+                var activeRequests = await _context.Requests
+                    .Include(r => r.Offers)
+                    .ThenInclude(o => o.User)
+                    .Where(r => r.Active && r.Offers.Any(o => o.Accepted && o.UserId == userCommon.Id))
+                    .OrderByDescending(r => r.CreationDate)
+                    .ToListAsync();
+
+                activeRequests.ForEach(ar =>
+                {
+                    ar.Offers = ar.Offers.Where(o => o.Accepted && o.UserId == userCommon.Id).ToList();
+                });
+
+                var inactiveRequests = await _context.Requests
+                    .Include(r => r.Offers)
+                    .ThenInclude(o => o.User)
+                    .Where(r => !r.Active && r.Offers.Any(o => o.Accepted && o.UserId == userCommon.Id))
+                    .OrderByDescending(r => r.CreationDate)
+                    .ToListAsync();
+
+                inactiveRequests.ForEach(ir =>
+                {
+                    ir.Offers = ir.Offers.Where(o => o.Accepted && o.UserId == userCommon.Id).ToList();
+                });
+
+                var allRequests = activeRequests.Concat(inactiveRequests).ToList();
+
+
+                var requestDtos = _mapper.Map<List<RequestDto>>(allRequests);
+
+                return new ApiResponse<List<RequestDto>>
+                {
+                    Success = true,
+                    Message = "Accepted requests retrieved successfully.",
+                    Jwt = jwt,
+                    DeviceId = deviceId,
+                    Data = requestDtos
+                };
+            }
+            catch (Exception e)
+            {
+                return new ApiResponse<List<RequestDto>>
+                {
+                    Success = false,
+                    Message = $"An error occurred while retrieving accepted requests: {e.Message}",
+                    Jwt = jwt,
+                    DeviceId = deviceId,
+                    Data = null
+                };
+            }
+        }
+
 
         public async Task<ApiResponse<RequestDto>> GetRequestById(RequestIdDto requestIdDto)
         {
@@ -239,6 +314,68 @@ namespace AutoPartsServiceWebApi.Services
 
             return apiResponse;
         }
+
+        public async Task<ApiResponse<RequestDto>> CloseRequest(CloseRequestDto closeRequestDto)
+        {
+            var userCommon = await _context.UserCommons
+                .Include(uc => uc.Requests)
+                .FirstOrDefaultAsync(uc => uc.Jwt == closeRequestDto.Jwt && uc.Devices.Any(d => d.DeviceId == closeRequestDto.DeviceId));
+
+            if (userCommon == null)
+            {
+                throw new Exception("User not found.");
+            }
+
+            var request = await _context.Requests
+                .Include(r => r.Offers)
+                .FirstOrDefaultAsync(r => r.Id == closeRequestDto.RequestId);
+
+            if (request == null)
+            {
+                throw new Exception("Request not found.");
+            }
+
+            // Check if the user is the owner of the request or has an accepted offer
+            if (request.UserCommonId != userCommon.Id && !request.Offers.Any(o => o.Accepted && o.UserId == userCommon.Id))
+            {
+                throw new Exception("User is not the owner of the request and does not have an accepted offer.");
+            }
+
+            // Check if the request is already inactive
+            if (!request.Active)
+            {
+                throw new Exception("Request is already inactive.");
+            }
+
+            // Find the accepted offer
+            var acceptedOffer = request.Offers.FirstOrDefault(o => o.Accepted);
+
+            if (acceptedOffer != null)
+            {
+                // Set the accepted offer's active status to false
+                acceptedOffer.Active = false;
+                _context.Offers.Update(acceptedOffer);
+            }
+
+            // Close the request
+            request.Active = false;
+            _context.Requests.Update(request);
+            await _context.SaveChangesAsync();
+
+            var requestDto = _mapper.Map<RequestDto>(request);
+
+            var apiResponse = new ApiResponse<RequestDto>
+            {
+                Success = true,
+                Message = "Request closed successfully.",
+                Jwt = closeRequestDto.Jwt,
+                DeviceId = closeRequestDto.DeviceId,
+                Data = requestDto
+            };
+
+            return apiResponse;
+        }
+
 
 
     }

@@ -44,12 +44,12 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
-        [HttpPost("getAvailableRequestsForUser")]
-        public async Task<ActionResult<ApiResponse<List<RequestDto>>>> GetAvailableRequestsForUser(UserJwtDeviceDto userJwtDevice)
+        [HttpPost("getActiveRequests")]
+        public async Task<ActionResult<ApiResponse<List<RequestDto>>>> GetActiveRequests(UserJwtDeviceDto userJwtDevice)
         {
             try
             {
-                var apiResponse = await _requestService.GetAvailableRequestsForUser(userJwtDevice.Jwt, userJwtDevice.DeviceId);
+                var apiResponse = await _requestService.GetActiveRequests(userJwtDevice.Jwt, userJwtDevice.DeviceId);
                 return Ok(apiResponse);
             }
             catch (Exception e)
@@ -113,6 +113,29 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
+        [HttpPost("getAcceptedRequests")]
+        public async Task<ActionResult<ApiResponse<List<RequestDto>>>> GetAcceptedRequests(UserJwtDeviceDto userJwtDevice)
+        {
+            try
+            {
+                var apiResponse = await _requestService.GetAcceptedRequests(userJwtDevice.Jwt, userJwtDevice.DeviceId);
+                return Ok(apiResponse);
+            }
+            catch (Exception e)
+            {
+                var apiResponse = new ApiResponse<List<RequestDto>>
+                {
+                    Success = false,
+                    Message = e.Message,
+                    Jwt = userJwtDevice.Jwt,
+                    DeviceId = userJwtDevice.DeviceId,
+                    Data = null
+                };
+
+                return Ok(apiResponse);
+            }
+        }
+
         [HttpPost("getRequestById")]
         public async Task<ActionResult<ApiResponse<RequestDto>>> GetRequestById(RequestIdDto requestIdDto)
         {
@@ -136,6 +159,26 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
+        [HttpPost("closeRequest")]
+        public async Task<ActionResult<ApiResponse<RequestDto>>> CloseRequest(CloseRequestDto closeRequestDto)
+        {
+            try
+            {
+                var response = await _requestService.CloseRequest(closeRequestDto);
+                return Ok(response);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new ApiResponse<RequestDto>
+                {
+                    Success = false,
+                    Message = e.Message,
+                    Jwt = closeRequestDto.Jwt,
+                    DeviceId = closeRequestDto.DeviceId,
+                    Data = null
+                });
+            }
+        }
 
     }
 }

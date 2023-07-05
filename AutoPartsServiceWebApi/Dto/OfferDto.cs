@@ -9,6 +9,8 @@
         public int UserId { get; set; }
         public UserCredentialsDto User { get; set; } 
         public int RequestId { get; set; }
+        public bool Active { get; set; }
+        public bool Accepted { get; set; }
     }
 
 

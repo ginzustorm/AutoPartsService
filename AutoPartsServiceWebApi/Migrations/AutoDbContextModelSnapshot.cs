@@ -233,10 +233,6 @@ namespace AutoPartsServiceWebApi.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime2");
 
@@ -259,28 +255,6 @@ namespace AutoPartsServiceWebApi.Migrations
                     b.HasIndex("UserCommonId");
 
                     b.ToTable("Requests");
-                });
-
-            modelBuilder.Entity("AutoPartsServiceWebApi.Models.RequestCategory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CategoryName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserCommonId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserCommonId");
-
-                    b.ToTable("RequestCategories");
                 });
 
             modelBuilder.Entity("AutoPartsServiceWebApi.Models.Review", b =>
@@ -542,17 +516,6 @@ namespace AutoPartsServiceWebApi.Migrations
                     b.Navigation("UserCommon");
                 });
 
-            modelBuilder.Entity("AutoPartsServiceWebApi.Models.RequestCategory", b =>
-                {
-                    b.HasOne("AutoPartsServiceWebApi.Models.UserCommon", "UserCommon")
-                        .WithMany("RequestCategories")
-                        .HasForeignKey("UserCommonId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("UserCommon");
-                });
-
             modelBuilder.Entity("AutoPartsServiceWebApi.Models.Review", b =>
                 {
                     b.HasOne("AutoPartsServiceWebApi.Models.Service", "Service")
@@ -634,8 +597,6 @@ namespace AutoPartsServiceWebApi.Migrations
                     b.Navigation("Documents");
 
                     b.Navigation("Offers");
-
-                    b.Navigation("RequestCategories");
 
                     b.Navigation("Requests");
 

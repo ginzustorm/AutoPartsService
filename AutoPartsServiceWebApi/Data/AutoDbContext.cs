@@ -34,9 +34,6 @@ namespace AutoPartsServiceWebApi.Data
         public DbSet<DocumentUser> Documents { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Offer> Offers { get; set; }
-        public DbSet<RequestCategory> RequestCategories { get; set; }
-
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -149,12 +146,6 @@ namespace AutoPartsServiceWebApi.Data
                 .HasMany(s => s.Reviews)
                 .WithOne(r => r.Service)
                 .HasForeignKey(r => r.ServiceId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<UserCommon>()
-                .HasMany(uc => uc.RequestCategories)
-                .WithOne(rc => rc.UserCommon)
-                .HasForeignKey(rc => rc.UserCommonId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Offer>()

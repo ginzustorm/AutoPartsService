@@ -10,7 +10,6 @@ namespace AutoPartsServiceWebApi.Models
         public string Header { get; set; }
         public decimal Price { get; set; }
         public bool Active { get; set; }
-        public string Category { get; set; }
         public int UserCommonId { get; set; }
         public UserCommon UserCommon { get; set; }
         public virtual ICollection<Offer> Offers { get; set; }

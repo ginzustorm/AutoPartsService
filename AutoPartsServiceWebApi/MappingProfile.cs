@@ -14,7 +14,7 @@ namespace AutoPartsServiceWebApi
             CreateMap<Car, CarDto>();
             CreateMap<Car, ResponseCarDto>();
             //CreateMap<Service, ServiceDto>();
-            CreateMap<RequestCategory, RequestCategoryDto>();
+            //CreateMap<RequestCategory, RequestCategoryDto>();
             CreateMap<Request, CreateRequestDto>();
             CreateMap<CreateRequestDto, Request>();
             CreateMap<Request, RequestDto>();

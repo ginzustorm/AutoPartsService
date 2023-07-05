@@ -8,7 +8,7 @@
         public string Header { get; set; }
         public decimal Price { get; set; }
         public bool Active { get; set; }
-        public string Category { get; set; }
+        // public string Category { get; set; }
         public List<OfferDto> Offers { get; set; }
     }
 }
