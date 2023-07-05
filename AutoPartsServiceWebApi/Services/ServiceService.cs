@@ -108,8 +108,10 @@ namespace AutoPartsServiceWebApi.Services
                 };
             }
 
-            var services = _context.Services.Where(s => s.UserCommonId == userCommon.Id);
-            var serviceDtos = _mapper.Map<List<ServiceDto>>(services);
+            var services = _context.Services
+                .Where(s => s.UserCommonId == userCommon.Id)
+                .OrderByDescending(s => s.Id);
+            var serviceDtos = _mapper.Map<List<ServiceDto>>(await services.ToListAsync());
 
             return new ApiResponse<List<ServiceDto>>
             {
@@ -140,7 +142,9 @@ namespace AutoPartsServiceWebApi.Services
                 throw new Exception("Category field must not be empty.");
             }
 
-            var services = await query.ToListAsync();
+            var services = await query
+                    .OrderByDescending(s => s.Id)
+                    .ToListAsync();
             var serviceDtos = _mapper.Map<List<ServiceWithUserDto>>(services);
 
             return serviceDtos;
