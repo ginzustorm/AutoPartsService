@@ -25,6 +25,9 @@ namespace AutoPartsServiceWebApi
             CreateMap<ReviewDto, Review>();
             CreateMap<Service, ServiceDto>()
                 .ForMember(dest => dest.Reviews, opt => opt.MapFrom(src => src.Reviews));
+            CreateMap<Service, ServiceWithUserDto>()
+                .ForMember(dto => dto.UserName, opt => opt.MapFrom(src => src.UserCommon.Name));
+
         }
     }
 

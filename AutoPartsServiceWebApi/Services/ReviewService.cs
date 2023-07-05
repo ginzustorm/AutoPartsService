@@ -53,12 +53,14 @@ public class ReviewService : IReviewService
 
         var newReview = _mapper.Map<Review>(request.Data);
         newReview.ServiceId = service.Id;
+        newReview.CreatedDate = DateTime.Now;
         service.Reviews.Add(newReview);
         service.AverageScore = service.Reviews.Average(r => r.Rating);
 
         await _context.SaveChangesAsync();
 
-        var updatedReviews = _mapper.Map<List<ReviewDto>>(service.Reviews);
+        var updatedReviews = _mapper.Map<List<ReviewDto>>(service.Reviews.OrderByDescending(r => r.CreatedDate));
+
 
         return new ApiResponse<List<ReviewDto>>
         {

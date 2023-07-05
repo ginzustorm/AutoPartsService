@@ -177,6 +177,7 @@ namespace AutoPartsServiceWebApi.Services
                     Message = "Service not found.",
                 };
             }
+            service.Reviews = service.Reviews.OrderByDescending(r => r.CreatedDate).ToList();
 
             var serviceDto = _mapper.Map<ServiceDto>(service);
 
