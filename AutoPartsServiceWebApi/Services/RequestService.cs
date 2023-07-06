@@ -376,7 +376,61 @@ namespace AutoPartsServiceWebApi.Services
             return apiResponse;
         }
 
+        public async Task<ApiResponse<List<RequestDto>>> GetMyCreatedRequests(string jwt, string deviceId)
+        {
+            try
+            {
+                var userCommon = await _context.UserCommons
+                    .Include(uc => uc.Requests)
+                    .ThenInclude(r => r.Offers)
+                    .FirstOrDefaultAsync(uc => uc.Jwt == jwt && uc.Devices.Any(d => d.DeviceId == deviceId));
 
+                if (userCommon == null)
+                {
+                    return new ApiResponse<List<RequestDto>>
+                    {
+                        Success = false,
+                        Message = "User not found.",
+                        Jwt = jwt,
+                        DeviceId = deviceId,
+                        Data = null
+                    };
+                }
 
+                var activeRequests = userCommon.Requests
+                    .Where(r => r.Active)
+                    .OrderByDescending(r => r.CreationDate)
+                    .ToList();
+
+                var inactiveRequests = userCommon.Requests
+                    .Where(r => !r.Active)
+                    .OrderByDescending(r => r.CreationDate)
+                    .ToList();
+
+                var allRequests = activeRequests.Concat(inactiveRequests).ToList();
+
+                var requestDtos = _mapper.Map<List<RequestDto>>(allRequests);
+
+                return new ApiResponse<List<RequestDto>>
+                {
+                    Success = true,
+                    Message = "User's created requests retrieved successfully.",
+                    Jwt = jwt,
+                    DeviceId = deviceId,
+                    Data = requestDtos
+                };
+            }
+            catch (Exception e)
+            {
+                return new ApiResponse<List<RequestDto>>
+                {
+                    Success = false,
+                    Message = $"An error occurred while retrieving user's created requests: {e.Message}",
+                    Jwt = jwt,
+                    DeviceId = deviceId,
+                    Data = null
+                };
+            }
+        }
     }
 }

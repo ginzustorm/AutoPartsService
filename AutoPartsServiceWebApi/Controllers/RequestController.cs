@@ -180,5 +180,29 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
+        [HttpPost("getMyCreatedRequests")]
+        public async Task<ActionResult<ApiResponse<List<RequestDto>>>> GetMyCreatedRequests(UserJwtDeviceDto userJwtDevice)
+        {
+            try
+            {
+                var apiResponse = await _requestService.GetMyCreatedRequests(userJwtDevice.Jwt, userJwtDevice.DeviceId);
+                return Ok(apiResponse);
+            }
+            catch (Exception e)
+            {
+                var apiResponse = new ApiResponse<List<RequestDto>>
+                {
+                    Success = false,
+                    Message = $"An error occurred while retrieving user's created requests: {e.Message}",
+                    Jwt = userJwtDevice.Jwt,
+                    DeviceId = userJwtDevice.DeviceId,
+                    Data = null
+                };
+
+                return Ok(apiResponse);
+            }
+        }
+
+
     }
 }
