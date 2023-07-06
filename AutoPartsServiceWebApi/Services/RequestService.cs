@@ -23,7 +23,6 @@ namespace AutoPartsServiceWebApi.Services
         public async Task<ApiResponse<List<RequestDto>>> CreateRequest(CreateRequestDto createRequestDto)
         {
             var userCommon = await _context.UserCommons
-                .Include(uc => uc.Requests)
                 .FirstOrDefaultAsync(uc => uc.Jwt == createRequestDto.Jwt && uc.Devices.Any(d => d.DeviceId == createRequestDto.DeviceId));
 
             if (userCommon == null)
@@ -35,14 +34,20 @@ namespace AutoPartsServiceWebApi.Services
             newRequest.Active = true;
             newRequest.CreationDate = DateTime.Now;
 
-            userCommon.Requests.Add(newRequest);
+            // Check if Requests is null
+            if (userCommon.Requests == null)
+            {
+                userCommon.Requests = new List<Request>();
+            }
 
+            userCommon.Requests.Add(newRequest);
             await _context.SaveChangesAsync();
 
-            var activeRequests = userCommon.Requests
-                .Where(r => r.Active)
+            var activeRequests = await _context.Requests
+                .Include(r => r.Offers)
+                .Where(r => r.UserCommonId == userCommon.Id && r.Active)
                 .OrderByDescending(r => r.CreationDate)
-                .ToList();
+                .ToListAsync();
 
             var activeRequestsDto = activeRequests.Select(ar => {
                 var dto = _mapper.Map<RequestDto>(ar);
