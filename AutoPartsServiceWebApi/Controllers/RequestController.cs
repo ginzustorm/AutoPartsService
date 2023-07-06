@@ -203,6 +203,26 @@ namespace AutoPartsServiceWebApi.Controllers
             }
         }
 
+        [HttpPost("deleteRequest")]
+        public async Task<ActionResult<ApiResponse<RequestDto>>> DeleteRequest(RequestIdDto requestIdDto)
+        {
+            try
+            {
+                var response = await _requestService.DeleteRequest(requestIdDto);
+                return Ok(response);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new ApiResponse<RequestDto>
+                {
+                    Success = false,
+                    Message = e.Message,
+                    Jwt = requestIdDto.Jwt,
+                    DeviceId = requestIdDto.DeviceId,
+                    Data = null
+                });
+            }
+        }
 
     }
 }

@@ -13,5 +13,6 @@ namespace AutoPartsServiceWebApi.Services
         Task<ApiResponse<List<RequestDto>>> GetAcceptedRequests(string jwt, string deviceId);
         Task<ApiResponse<RequestDto>> CloseRequest(CloseRequestDto closeRequestDto);
         Task<ApiResponse<List<RequestDto>>> GetMyCreatedRequests(string jwt, string deviceId);
+        Task<ApiResponse<RequestDto>> DeleteRequest(RequestIdDto requestIdDto);
     }
 }

@@ -44,7 +44,11 @@ namespace AutoPartsServiceWebApi.Services
                 .OrderByDescending(r => r.CreationDate)
                 .ToList();
 
-            var activeRequestsDto = _mapper.Map<List<RequestDto>>(activeRequests);
+            var activeRequestsDto = activeRequests.Select(ar => {
+                var dto = _mapper.Map<RequestDto>(ar);
+                dto.Close = ar.Offers.Any(o => o.Accepted);
+                return dto;
+            }).ToList();
 
             var apiResponse = new ApiResponse<List<RequestDto>>
             {
@@ -79,11 +83,17 @@ namespace AutoPartsServiceWebApi.Services
                 }
 
                 var activeRequests = await _context.Requests
-                    .Where(r => r.Active)
+                    .Include(r => r.Offers)
+                    .Where(r => r.Active
+                        && (r.Offers == null || !r.Offers.Any(o => o.Accepted)))
                     .OrderByDescending(r => r.CreationDate)
                     .ToListAsync();
 
-                var requestDtos = _mapper.Map<List<RequestDto>>(activeRequests);
+                var requestDtos = activeRequests.Select(ar => {
+                    var dto = _mapper.Map<RequestDto>(ar);
+                    dto.Close = ar.Offers.Any(o => o.Accepted);
+                    return dto;
+                }).ToList();
 
                 return new ApiResponse<List<RequestDto>>
                 {
@@ -106,6 +116,7 @@ namespace AutoPartsServiceWebApi.Services
                 };
             }
         }
+
 
         public async Task<ApiResponse<OfferDto>> CreateOffer(CreateOfferDto createOfferDto)
         {
@@ -230,34 +241,17 @@ namespace AutoPartsServiceWebApi.Services
                     };
                 }
 
-                var activeRequests = await _context.Requests
+                var allRequests = await _context.Requests
                     .Include(r => r.Offers)
-                    .ThenInclude(o => o.User)
-                    .Where(r => r.Active && r.Offers.Any(o => o.Accepted && o.UserId == userCommon.Id))
+                    .Where(r => r.Offers.Any(o => o.Accepted))
                     .OrderByDescending(r => r.CreationDate)
                     .ToListAsync();
 
-                activeRequests.ForEach(ar =>
-                {
-                    ar.Offers = ar.Offers.Where(o => o.Accepted && o.UserId == userCommon.Id).ToList();
-                });
-
-                var inactiveRequests = await _context.Requests
-                    .Include(r => r.Offers)
-                    .ThenInclude(o => o.User)
-                    .Where(r => !r.Active && r.Offers.Any(o => o.Accepted && o.UserId == userCommon.Id))
-                    .OrderByDescending(r => r.CreationDate)
-                    .ToListAsync();
-
-                inactiveRequests.ForEach(ir =>
-                {
-                    ir.Offers = ir.Offers.Where(o => o.Accepted && o.UserId == userCommon.Id).ToList();
-                });
-
-                var allRequests = activeRequests.Concat(inactiveRequests).ToList();
-
-
-                var requestDtos = _mapper.Map<List<RequestDto>>(allRequests);
+                var requestDtos = allRequests.Select(ar => {
+                    var dto = _mapper.Map<RequestDto>(ar);
+                    dto.Close = ar.Offers.Any(o => o.Accepted);
+                    return dto;
+                }).ToList();
 
                 return new ApiResponse<List<RequestDto>>
                 {
@@ -293,7 +287,7 @@ namespace AutoPartsServiceWebApi.Services
             }
 
             var request = await _context.Requests
-                .Include(r => r.Offers)  
+                .Include(r => r.Offers)
                 .FirstOrDefaultAsync(r => r.Id == requestIdDto.Id);
 
             if (request == null)
@@ -301,7 +295,8 @@ namespace AutoPartsServiceWebApi.Services
                 throw new Exception("Request not found.");
             }
 
-            var requestDto = _mapper.Map<RequestDto>(request);  
+            var requestDto = _mapper.Map<RequestDto>(request);
+            requestDto.Close = request.Offers.Any(o => o.Accepted);
 
             var apiResponse = new ApiResponse<RequestDto>
             {
@@ -409,7 +404,11 @@ namespace AutoPartsServiceWebApi.Services
 
                 var allRequests = activeRequests.Concat(inactiveRequests).ToList();
 
-                var requestDtos = _mapper.Map<List<RequestDto>>(allRequests);
+                var requestDtos = allRequests.Select(ar => {
+                    var dto = _mapper.Map<RequestDto>(ar);
+                    dto.Close = ar.Offers.Any(o => o.Accepted);
+                    return dto;
+                }).ToList();
 
                 return new ApiResponse<List<RequestDto>>
                 {
@@ -432,5 +431,41 @@ namespace AutoPartsServiceWebApi.Services
                 };
             }
         }
+
+        public async Task<ApiResponse<RequestDto>> DeleteRequest(RequestIdDto requestIdDto)
+        {
+            var userCommon = await _context.UserCommons
+                .Include(uc => uc.Requests)
+                .FirstOrDefaultAsync(uc => uc.Jwt == requestIdDto.Jwt && uc.Devices.Any(d => d.DeviceId == requestIdDto.DeviceId));
+
+            if (userCommon == null)
+            {
+                throw new Exception("User not found.");
+            }
+
+            var request = userCommon.Requests.FirstOrDefault(r => r.Id == requestIdDto.Id);
+
+            if (request == null)
+            {
+                throw new Exception("Request not found.");
+            }
+
+            _context.Requests.Remove(request);
+            await _context.SaveChangesAsync();
+
+            var requestDto = _mapper.Map<RequestDto>(request);
+
+            var apiResponse = new ApiResponse<RequestDto>
+            {
+                Success = true,
+                Message = "Request deleted successfully.",
+                Jwt = requestIdDto.Jwt,
+                DeviceId = requestIdDto.DeviceId,
+                Data = null
+            };
+
+            return apiResponse;
+        }
+
     }
 }
