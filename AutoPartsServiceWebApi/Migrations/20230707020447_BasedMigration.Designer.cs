@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutoPartsServiceWebApi.Migrations
 {
     [DbContext(typeof(AutoDbContext))]
-    [Migration("20230705094537_FineMigration")]
-    partial class FineMigration
+    [Migration("20230707020447_BasedMigration")]
+    partial class BasedMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
