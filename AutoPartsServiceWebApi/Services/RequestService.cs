@@ -346,9 +346,9 @@ namespace AutoPartsServiceWebApi.Services
             }
 
             // Check if the request is already closed
-            if (request.Closed)
+            if (request.Closed == true)
             {
-                throw new Exception("Request is already inactive.");
+                throw new Exception("Request is already closed.");
             }
 
             // Find the accepted offer
