@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AutoPartsServiceWebApi.Migrations
 {
     /// <inheritdoc />
-    public partial class BasedMigration : Migration
+    public partial class BasedMig : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -177,7 +177,8 @@ namespace AutoPartsServiceWebApi.Migrations
                     Header = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Active = table.Column<bool>(type: "bit", nullable: false),
-                    UserCommonId = table.Column<int>(type: "int", nullable: false)
+                    UserCommonId = table.Column<int>(type: "int", nullable: false),
+                    Closed = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -271,7 +272,7 @@ namespace AutoPartsServiceWebApi.Migrations
                         column: x => x.RequestId,
                         principalTable: "Requests",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Offers_UserCommons_UserId",
                         column: x => x.UserId,
