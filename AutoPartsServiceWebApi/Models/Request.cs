@@ -13,7 +13,7 @@ namespace AutoPartsServiceWebApi.Models
         public int UserCommonId { get; set; }
         public UserCommon UserCommon { get; set; }
         public virtual ICollection<Offer> Offers { get; set; }
-
+        public bool Closed { get; set; }
     }
 
 }

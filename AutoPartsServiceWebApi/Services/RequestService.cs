@@ -32,6 +32,7 @@ namespace AutoPartsServiceWebApi.Services
 
             var newRequest = _mapper.Map<Request>(createRequestDto);
             newRequest.Active = true;
+            newRequest.Closed = false; // Ensure that new requests are not closed
             newRequest.CreationDate = DateTime.Now;
 
             // Check if Requests is null
@@ -67,6 +68,7 @@ namespace AutoPartsServiceWebApi.Services
             return apiResponse;
         }
 
+
         public async Task<ApiResponse<List<RequestDto>>> GetActiveRequests(string jwt, string deviceId)
         {
             try
@@ -89,12 +91,12 @@ namespace AutoPartsServiceWebApi.Services
 
                 var activeRequests = await _context.Requests
                     .Include(r => r.Offers)
-                    .Where(r => r.Active
-                        && (r.Offers == null || !r.Offers.Any(o => o.Accepted)))
+                    .Where(r => r.Active && (r.Offers == null || !r.Offers.Any(o => o.Accepted)) && r.UserCommonId != userCommon.Id)
                     .OrderByDescending(r => r.CreationDate)
                     .ToListAsync();
 
-                var requestDtos = activeRequests.Select(ar => {
+                var requestDtos = activeRequests.Select(ar =>
+                {
                     var dto = _mapper.Map<RequestDto>(ar);
                     dto.Close = ar.Offers.Any(o => o.Accepted);
                     return dto;
@@ -121,7 +123,6 @@ namespace AutoPartsServiceWebApi.Services
                 };
             }
         }
-
 
         public async Task<ApiResponse<OfferDto>> CreateOffer(CreateOfferDto createOfferDto)
         {
@@ -209,6 +210,9 @@ namespace AutoPartsServiceWebApi.Services
                 otherOffer.Active = false;
             }
 
+            request.Active = false;
+            _context.Requests.Update(request);
+
             _context.Offers.UpdateRange(otherOffers);
             await _context.SaveChangesAsync();
 
@@ -248,11 +252,12 @@ namespace AutoPartsServiceWebApi.Services
 
                 var allRequests = await _context.Requests
                     .Include(r => r.Offers)
-                    .Where(r => r.Offers.Any(o => o.Accepted))
+                    .Where(r => r.Offers.Any(o => o.Accepted) && r.UserCommonId != userCommon.Id)
                     .OrderByDescending(r => r.CreationDate)
                     .ToListAsync();
 
-                var requestDtos = allRequests.Select(ar => {
+                var requestDtos = allRequests.Select(ar =>
+                {
                     var dto = _mapper.Map<RequestDto>(ar);
                     dto.Close = ar.Offers.Any(o => o.Accepted);
                     return dto;
@@ -280,7 +285,6 @@ namespace AutoPartsServiceWebApi.Services
             }
         }
 
-
         public async Task<ApiResponse<RequestDto>> GetRequestById(RequestIdDto requestIdDto)
         {
             var userCommon = await _context.UserCommons
@@ -301,7 +305,7 @@ namespace AutoPartsServiceWebApi.Services
             }
 
             var requestDto = _mapper.Map<RequestDto>(request);
-            requestDto.Close = request.Offers.Any(o => o.Accepted);
+            //requestDto.Close = request.Offers.Any(o => o.Accepted);
 
             var apiResponse = new ApiResponse<RequestDto>
             {
@@ -341,8 +345,8 @@ namespace AutoPartsServiceWebApi.Services
                 throw new Exception("User is not the owner of the request and does not have an accepted offer.");
             }
 
-            // Check if the request is already inactive
-            if (!request.Active)
+            // Check if the request is already closed
+            if (request.Closed)
             {
                 throw new Exception("Request is already inactive.");
             }
@@ -358,7 +362,7 @@ namespace AutoPartsServiceWebApi.Services
             }
 
             // Close the request
-            request.Active = false;
+            request.Closed = true;
             _context.Requests.Update(request);
             await _context.SaveChangesAsync();
 
@@ -370,7 +374,7 @@ namespace AutoPartsServiceWebApi.Services
                 Message = "Request closed successfully.",
                 Jwt = closeRequestDto.Jwt,
                 DeviceId = closeRequestDto.DeviceId,
-                Data = requestDto
+                Data = null
             };
 
             return apiResponse;

@@ -152,7 +152,7 @@ namespace AutoPartsServiceWebApi.Data
                 .HasOne(o => o.Request)
                 .WithMany(r => r.Offers)
                 .HasForeignKey(o => o.RequestId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
