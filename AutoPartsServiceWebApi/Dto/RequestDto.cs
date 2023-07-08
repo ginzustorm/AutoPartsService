@@ -10,6 +10,6 @@
         public bool Active { get; set; }
         // public string Category { get; set; }
         public List<OfferDto> Offers { get; set; }
-        public bool Close { get; set; }
+        public bool Closed { get; set; }
     }
 }

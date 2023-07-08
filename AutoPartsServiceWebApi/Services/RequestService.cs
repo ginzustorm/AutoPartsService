@@ -32,7 +32,7 @@ namespace AutoPartsServiceWebApi.Services
 
             var newRequest = _mapper.Map<Request>(createRequestDto);
             newRequest.Active = true;
-            newRequest.Closed = false; // Ensure that new requests are not closed
+            newRequest.Closed = false; 
             newRequest.CreationDate = DateTime.Now;
 
             // Check if Requests is null
@@ -52,7 +52,7 @@ namespace AutoPartsServiceWebApi.Services
 
             var activeRequestsDto = activeRequests.Select(ar => {
                 var dto = _mapper.Map<RequestDto>(ar);
-                dto.Close = ar.Offers.Any(o => o.Accepted);
+                //dto.Closed = ar.Offers.Any(o => o.Accepted);
                 return dto;
             }).ToList();
 
@@ -98,7 +98,7 @@ namespace AutoPartsServiceWebApi.Services
                 var requestDtos = activeRequests.Select(ar =>
                 {
                     var dto = _mapper.Map<RequestDto>(ar);
-                    dto.Close = ar.Offers.Any(o => o.Accepted);
+                    //dto.Close = ar.Offers.Any(o => o.Accepted);
                     return dto;
                 }).ToList();
 
@@ -259,7 +259,7 @@ namespace AutoPartsServiceWebApi.Services
                 var requestDtos = allRequests.Select(ar =>
                 {
                     var dto = _mapper.Map<RequestDto>(ar);
-                    dto.Close = ar.Offers.Any(o => o.Accepted);
+                    //dto.Close = ar.Offers.Any(o => o.Accepted);
                     return dto;
                 }).ToList();
 
@@ -415,7 +415,7 @@ namespace AutoPartsServiceWebApi.Services
 
                 var requestDtos = allRequests.Select(ar => {
                     var dto = _mapper.Map<RequestDto>(ar);
-                    dto.Close = ar.Offers.Any(o => o.Accepted);
+                    //dto.Close = ar.Offers.Any(o => o.Accepted);
                     return dto;
                 }).ToList();
 
